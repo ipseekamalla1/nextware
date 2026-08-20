@@ -46,7 +46,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
     section: "Operations",
     items: [
       { label: "Inventory", icon: LayersIcon, href: "/inventory", soon: true },
-      { label: "Warehouses", icon: WarehouseIcon, href: "/warehouses", soon: true },
+      { label: "Warehouses", icon: WarehouseIcon, href: "/warehouses"},
       { label: "Purchasing", icon: CartDownIcon, href: "/purchasing", soon: true },
       { label: "Sales", icon: CartUpIcon, href: "/sales", soon: true },
       { label: "Fulfillment", icon: PackageCheckIcon, href: "/fulfillment", soon: true },

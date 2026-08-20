@@ -859,3 +859,195 @@ export async function activateSupplier(
 
   return response.json();
 }
+
+/* =========================================================
+   WAREHOUSE
+========================================================= */
+
+export interface Warehouse {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WarehouseCreateRequest {
+  companyId: string;
+  code: string;
+  name: string;
+
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+
+  active: boolean;
+}
+
+export async function getWarehouses(
+  companyId: string
+): Promise<Warehouse[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouses?companyId=${encodeURIComponent(
+      companyId
+    )}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load warehouses: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function getWarehouse(
+  companyId: string,
+  warehouseId: string
+): Promise<Warehouse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+      warehouseId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load warehouse: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function createWarehouse(
+  request: WarehouseCreateRequest
+): Promise<Warehouse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouses`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to create warehouse: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function updateWarehouse(
+  companyId: string,
+  warehouseId: string,
+  request: WarehouseCreateRequest
+): Promise<Warehouse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+      warehouseId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to update warehouse: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function deactivateWarehouse(
+  companyId: string,
+  warehouseId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+      warehouseId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to deactivate warehouse: ${response.status}`
+      )
+    );
+  }
+}
+
+export async function activateWarehouse(
+  companyId: string,
+  warehouseId: string
+): Promise<Warehouse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+      warehouseId
+    )}/activate?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to activate warehouse: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
