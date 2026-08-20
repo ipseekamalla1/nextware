@@ -1,0 +1,130 @@
+package com.nextware.controller;
+
+import com.nextware.dto.supplier.SupplierCreateRequest;
+import com.nextware.dto.supplier.SupplierResponse;
+import com.nextware.service.supplier.SupplierService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/suppliers")
+public class SupplierController {
+
+    private final SupplierService supplierService;
+
+    public SupplierController(
+            SupplierService supplierService
+    ) {
+        this.supplierService =
+                supplierService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<SupplierResponse>>
+    getSuppliers(
+            @RequestParam UUID companyId
+    ) {
+        return ResponseEntity.ok(
+                supplierService.getSuppliers(
+                        companyId
+                )
+        );
+    }
+
+    @GetMapping("/{supplierId}")
+    public ResponseEntity<SupplierResponse>
+    getSupplier(
+            @RequestParam UUID companyId,
+            @PathVariable UUID supplierId
+    ) {
+        return ResponseEntity.ok(
+                supplierService.getSupplier(
+                        companyId,
+                        supplierId
+                )
+        );
+    }
+
+    @PostMapping
+    public ResponseEntity<SupplierResponse>
+    createSupplier(
+            @Valid
+            @RequestBody
+            SupplierCreateRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        supplierService.createSupplier(
+                                request
+                        )
+                );
+    }
+
+    @PutMapping("/{supplierId}")
+    public ResponseEntity<SupplierResponse>
+    updateSupplier(
+            @RequestParam UUID companyId,
+            @PathVariable UUID supplierId,
+            @Valid
+            @RequestBody
+            SupplierCreateRequest request
+    ) {
+        return ResponseEntity.ok(
+                supplierService.updateSupplier(
+                        companyId,
+                        supplierId,
+                        request
+                )
+        );
+    }
+
+    /**
+     * Soft delete / deactivate supplier.
+     */
+    @DeleteMapping("/{supplierId}")
+    public ResponseEntity<Void>
+    deactivateSupplier(
+            @RequestParam UUID companyId,
+            @PathVariable UUID supplierId
+    ) {
+        supplierService.deactivateSupplier(
+                companyId,
+                supplierId
+        );
+
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
+
+    /**
+     * Activate supplier.
+     */
+    @PutMapping("/{supplierId}/activate")
+    public ResponseEntity<SupplierResponse>
+    activateSupplier(
+            @RequestParam UUID companyId,
+            @PathVariable UUID supplierId
+    ) {
+        return ResponseEntity.ok(
+                supplierService.activateSupplier(
+                        companyId,
+                        supplierId
+                )
+        );
+    }
+}
