@@ -1051,3 +1051,180 @@ export async function activateWarehouse(
 
   return response.json();
 }
+/* =========================================================
+   WAREHOUSE LOCATION
+========================================================= */
+
+export interface WarehouseLocation {
+  id: string;
+  warehouseId: string;
+  code: string;
+  name: string | null;
+  locationType: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WarehouseLocationCreateRequest {
+  warehouseId: string;
+  code: string;
+  name: string | null;
+  locationType: string;
+  active: boolean;
+}
+
+export async function getWarehouseLocations(
+  warehouseId: string
+): Promise<WarehouseLocation[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouse-locations?warehouseId=${encodeURIComponent(
+      warehouseId
+    )}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load warehouse locations: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function getWarehouseLocation(
+  warehouseId: string,
+  locationId: string
+): Promise<WarehouseLocation> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+      locationId
+    )}?warehouseId=${encodeURIComponent(warehouseId)}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load warehouse location: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function createWarehouseLocation(
+  request: WarehouseLocationCreateRequest
+): Promise<WarehouseLocation> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouse-locations`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to create warehouse location: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function updateWarehouseLocation(
+  warehouseId: string,
+  locationId: string,
+  request: WarehouseLocationCreateRequest
+): Promise<WarehouseLocation> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+      locationId
+    )}?warehouseId=${encodeURIComponent(warehouseId)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to update warehouse location: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function deactivateWarehouseLocation(
+  warehouseId: string,
+  locationId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+      locationId
+    )}?warehouseId=${encodeURIComponent(warehouseId)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to deactivate warehouse location: ${response.status}`
+      )
+    );
+  }
+}
+
+export async function activateWarehouseLocation(
+  warehouseId: string,
+  locationId: string
+): Promise<WarehouseLocation> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+      locationId
+    )}/activate?warehouseId=${encodeURIComponent(warehouseId)}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to activate warehouse location: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
