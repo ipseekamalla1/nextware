@@ -85,6 +85,8 @@ export interface Customer {
   updatedAt: string;
 }
 
+
+
 export interface CustomerCreateRequest {
   companyId: string;
   customerCode: string;
@@ -109,6 +111,47 @@ export interface CustomerCreateRequest {
   active: boolean;
 }
 
+
+/* =========================================================
+   SUPPLIER
+========================================================= */
+
+export interface Supplier {
+  id: string;
+  companyId: string;
+  supplierCode: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupplierCreateRequest {
+  companyId: string;
+  supplierCode: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+
+  active: boolean;
+}
 /* =========================================================
    ERROR HANDLING
 ========================================================= */
@@ -607,6 +650,165 @@ export async function activateCustomer(
       await getErrorMessage(
         response,
         `Failed to activate customer: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+/* =========================================================
+   SUPPLIER API
+========================================================= */
+
+export async function getSuppliers(
+  companyId: string
+): Promise<Supplier[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/suppliers?companyId=${encodeURIComponent(
+      companyId
+    )}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load suppliers: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function getSupplier(
+  companyId: string,
+  supplierId: string
+): Promise<Supplier> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+      supplierId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load supplier: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function createSupplier(
+  request: SupplierCreateRequest
+): Promise<Supplier> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/suppliers`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to create supplier: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function updateSupplier(
+  companyId: string,
+  supplierId: string,
+  request: SupplierCreateRequest
+): Promise<Supplier> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+      supplierId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to update supplier: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function deactivateSupplier(
+  companyId: string,
+  supplierId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+      supplierId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to deactivate supplier: ${response.status}`
+      )
+    );
+  }
+}
+
+export async function activateSupplier(
+  companyId: string,
+  supplierId: string
+): Promise<Supplier> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+      supplierId
+    )}/activate?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to activate supplier: ${response.status}`
       )
     );
   }
