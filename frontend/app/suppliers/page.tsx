@@ -9,166 +9,22 @@ import {
   getSuppliers,
   Supplier,
 } from "@/lib/api";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { IconButton } from "@/components/ui/IconButton";
+import {
+  AlertIcon,
+  CloseIcon,
+  EditIcon,
+  EyeIcon,
+  PlusIcon,
+  PowerIcon,
+  SearchIcon,
+} from "@/components/ui/icons";
 
 const COMPANY_ID =
   "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
 type DialogType = "activate" | "deactivate" | null;
-
-function EyeIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function PowerIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2v10" />
-      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-4-4" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 6 12 12" />
-      <path d="m18 6-12 12" />
-    </svg>
-  );
-}
-
-function AlertIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4" />
-      <path d="M12 16h.01" />
-    </svg>
-  );
-}
-
-function IconButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
-        onClick={onClick}
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-      >
-        {children}
-      </button>
-
-      <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-lg transition group-hover:opacity-100">
-        {label}
-      </div>
-    </div>
-  );
-}
 
 export default function SuppliersPage() {
   const router = useRouter();
@@ -351,17 +207,17 @@ export default function SuppliersPage() {
     <AppShell>
       <div className="p-6 lg:p-8">
         <div className="mb-6">
-          <div className="mb-1 text-xs font-medium text-slate-400">
+          <div className="mb-1 text-xs font-medium text-ink-muted">
             Master Data / Suppliers
           </div>
 
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-ink">
                 Suppliers
               </h1>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-ink-muted">
                 Manage suppliers used throughout NextWare.
               </p>
             </div>
@@ -371,7 +227,7 @@ export default function SuppliersPage() {
               onClick={() =>
                 router.push("/suppliers/new")
               }
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
             >
               <PlusIcon />
               New Supplier
@@ -379,10 +235,10 @@ export default function SuppliersPage() {
           </div>
         </div>
 
-        <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-muted">
                 <SearchIcon />
               </div>
 
@@ -393,7 +249,7 @@ export default function SuppliersPage() {
                   setSearch(event.target.value)
                 }
                 placeholder="Search by code, name, email or phone..."
-                className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+                className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
               />
             </div>
 
@@ -402,7 +258,7 @@ export default function SuppliersPage() {
               onChange={(event) =>
                 setStatusFilter(event.target.value)
               }
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
               <option>All Statuses</option>
               <option>Active</option>
@@ -412,35 +268,35 @@ export default function SuppliersPage() {
         </div>
 
         {loading && (
-          <div className="rounded-xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-700" />
+          <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
 
-            <p className="mt-4 text-sm text-slate-500">
+            <p className="mt-4 text-sm text-ink-muted">
               Loading suppliers...
             </p>
           </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
             <div className="flex items-start gap-3">
-              <div className="text-red-600">
+              <div className="text-danger">
                 <AlertIcon />
               </div>
 
               <div>
-                <p className="text-sm font-semibold text-red-700">
+                <p className="text-sm font-semibold text-danger">
                   Unable to load suppliers
                 </p>
 
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-danger">
                   {error}
                 </p>
 
                 <button
                   type="button"
                   onClick={loadSuppliers}
-                  className="mt-5 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                 >
                   Try Again
                 </button>
@@ -452,16 +308,16 @@ export default function SuppliersPage() {
         {!loading &&
           !error &&
           filteredSuppliers.length === 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500">
+            <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-active text-xl text-ink-muted">
                 ♙
               </div>
 
-              <h2 className="mt-4 text-base font-semibold text-slate-900">
+              <h2 className="mt-4 text-base font-semibold text-ink">
                 No suppliers found
               </h2>
 
-              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+              <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
                 {search ||
                 statusFilter !== "All Statuses"
                   ? "No suppliers match your current search or filter."
@@ -475,7 +331,7 @@ export default function SuppliersPage() {
                     onClick={() =>
                       router.push("/suppliers/new")
                     }
-                    className="mt-5 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                   >
                     Create Supplier
                   </button>
@@ -486,69 +342,69 @@ export default function SuppliersPage() {
         {!loading &&
           !error &&
           filteredSuppliers.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[950px] text-left">
-                  <thead className="border-b border-slate-200 bg-slate-50">
+                  <thead className="border-b border-line bg-surface-hover">
                     <tr>
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Supplier Code
                       </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Supplier
                       </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Email
                       </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Phone
                       </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Location
                       </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Status
                       </th>
 
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Actions
                       </th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-line">
                     {filteredSuppliers.map(
                       (supplier) => (
                         <tr
                           key={supplier.id}
-                          className="transition hover:bg-slate-50"
+                          className="transition hover:bg-surface-hover"
                         >
                           <td className="px-5 py-4">
-                            <span className="font-mono text-sm font-medium text-slate-700">
+                            <span className="font-mono text-sm font-medium text-ink-secondary">
                               {supplier.supplierCode}
                             </span>
                           </td>
 
                           <td className="px-5 py-4">
-                            <div className="text-sm font-semibold text-slate-900">
+                            <div className="text-sm font-semibold text-ink">
                               {supplier.name}
                             </div>
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-slate-600">
+                          <td className="px-5 py-4 text-sm text-ink-secondary">
                             {supplier.email || "—"}
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-slate-600">
+                          <td className="px-5 py-4 text-sm text-ink-secondary">
                             {supplier.phone || "—"}
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-slate-600">
+                          <td className="px-5 py-4 text-sm text-ink-secondary">
                             {[
                               supplier.city,
                               supplier.state,
@@ -558,17 +414,10 @@ export default function SuppliersPage() {
                           </td>
 
                           <td className="px-5 py-4">
-                            <span
-                              className={
-                                supplier.active
-                                  ? "inline-flex rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"
-                                  : "inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600"
-                              }
-                            >
-                              {supplier.active
-                                ? "Active"
-                                : "Inactive"}
-                            </span>
+                            <StatusBadge
+                              active={supplier.active}
+                              className="px-3 py-1.5"
+                            />
                           </td>
 
                           <td className="px-5 py-4">
@@ -629,28 +478,28 @@ export default function SuppliersPage() {
             <div
               className={
                 toast.type === "success"
-                  ? "flex items-start gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg"
-                  : "flex items-start gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 shadow-lg"
+                  ? "flex items-start gap-3 rounded-xl border border-success/30 bg-surface px-4 py-3 shadow-lg"
+                  : "flex items-start gap-3 rounded-xl border border-danger/30 bg-surface px-4 py-3 shadow-lg"
               }
             >
               <div
                 className={
                   toast.type === "success"
-                    ? "text-emerald-600"
-                    : "text-red-600"
+                    ? "text-success"
+                    : "text-danger"
                 }
               >
                 <AlertIcon />
               </div>
 
-              <p className="flex-1 text-sm text-slate-700">
+              <p className="flex-1 text-sm text-ink-secondary">
                 {toast.message}
               </p>
 
               <button
                 type="button"
                 onClick={() => setToast(null)}
-                className="text-slate-400 hover:text-slate-700"
+                className="text-ink-muted hover:text-ink-secondary"
               >
                 <CloseIcon />
               </button>
@@ -659,17 +508,17 @@ export default function SuppliersPage() {
         )}
 
         {dialogType && dialogSupplier && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-lg font-semibold text-ink">
                     {dialogType === "deactivate"
                       ? "Deactivate Supplier"
                       : "Activate Supplier"}
                   </h2>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-ink-muted">
                     {dialogType === "deactivate"
                       ? "This supplier will become inactive."
                       : "This supplier will become active again."}
@@ -679,18 +528,18 @@ export default function SuppliersPage() {
                 <button
                   type="button"
                   onClick={closeDialog}
-                  className="text-slate-400 hover:text-slate-700"
+                  className="text-ink-muted hover:text-ink-secondary"
                 >
                   <CloseIcon />
                 </button>
               </div>
 
-              <div className="mt-5 rounded-lg bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-900">
+              <div className="mt-5 rounded-lg bg-surface-hover p-4">
+                <p className="text-sm font-semibold text-ink">
                   {dialogSupplier.name}
                 </p>
 
-                <p className="mt-1 font-mono text-xs text-slate-500">
+                <p className="mt-1 font-mono text-xs text-ink-muted">
                   {dialogSupplier.supplierCode}
                 </p>
               </div>
@@ -700,7 +549,7 @@ export default function SuppliersPage() {
                   type="button"
                   onClick={closeDialog}
                   disabled={actionLoading}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -709,7 +558,7 @@ export default function SuppliersPage() {
                   type="button"
                   onClick={confirmStatusChange}
                   disabled={actionLoading}
-                  className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
                 >
                   {actionLoading
                     ? "Processing..."

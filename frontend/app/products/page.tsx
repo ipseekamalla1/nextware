@@ -3,26 +3,39 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import { IconButton } from "@/components/ui/IconButton";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  AlertIcon,
+  CheckIcon,
+  CloseIcon,
+  EditIcon,
+  EyeIcon,
+  PlusIcon,
+  PowerIcon,
+  SearchIcon,
+  TrashIcon,
+} from "@/components/ui/icons";
 import {
   activateProduct,
+  Category,
   createProduct,
   deactivateProduct,
-  getProduct,
+  getCategories,
   getProducts,
+  getUnitsOfMeasure,
   Product,
   ProductCreateRequest,
+  UnitOfMeasure,
   updateProduct,
 } from "@/lib/api";
 
 const COMPANY_ID = "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
-const UNIT_OF_MEASURE_ID =
-  "a938839d-ca27-4a60-b25b-038a41b34236";
-
 const initialForm: ProductCreateRequest = {
   companyId: COMPANY_ID,
   categoryId: null,
-  unitOfMeasureId: UNIT_OF_MEASURE_ID,
+  unitOfMeasureId: "",
   sku: "",
   name: "",
   description: "",
@@ -32,267 +45,33 @@ const initialForm: ProductCreateRequest = {
   active: true,
 };
 
-type DialogType =
-  | "deactivate"
-  | "activate"
-  | "success"
-  | "error"
-  | null;
-
-type ActionType =
-  | "view"
-  | "edit"
-  | "activate"
-  | "deactivate";
-
-function EyeIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function PowerIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 2v10" />
-      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6h18" />
-      <path d="M8 6V4h8v2" />
-      <path d="M19 6l-1 14H6L5 6" />
-      <path d="M10 11v5" />
-      <path d="M14 11v5" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m6 6 12 12" />
-      <path d="m18 6-12 12" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m5 12 4 4L19 6" />
-    </svg>
-  );
-}
-
-function AlertIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4" />
-      <path d="M12 16h.01" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-4-4" />
-    </svg>
-  );
-}
-
-function IconButton({
-  label,
-  onClick,
-  children,
-  danger = false,
-  disabled = false,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
-        onClick={onClick}
-        disabled={disabled}
-        className={`flex h-9 w-9 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
-          danger
-            ? "border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-            : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-        }`}
-      >
-        {children}
-      </button>
-
-      <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-lg transition group-hover:opacity-100">
-        {label}
-      </div>
-    </div>
-  );
-}
+type DialogType = "deactivate" | "activate" | null;
 
 export default function ProductsPage() {
   const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<UnitOfMeasure[]>([]);
+
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState("All Statuses");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] =
-    useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [showCreateForm, setShowCreateForm] =
-    useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
 
-  const [showEditForm, setShowEditForm] =
-    useState(false);
-
-  const [form, setForm] =
-    useState<ProductCreateRequest>(initialForm);
-
-  const [editingProduct, setEditingProduct] =
-    useState<Product | null>(null);
+  const [form, setForm] = useState<ProductCreateRequest>(initialForm);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const [formError, setFormError] =
-    useState<string | null>(null);
-
-  const [dialogType, setDialogType] =
-    useState<DialogType>(null);
-
-  const [dialogProduct, setDialogProduct] =
-    useState<Product | null>(null);
-
-  const [actionLoading, setActionLoading] =
-    useState(false);
+  const [dialogType, setDialogType] = useState<DialogType>(null);
+  const [dialogProduct, setDialogProduct] = useState<Product | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [toast, setToast] = useState<{
     type: "success" | "error";
@@ -300,7 +79,7 @@ export default function ProductsPage() {
   } | null>(null);
 
   useEffect(() => {
-    loadProducts();
+    loadAll();
   }, []);
 
   useEffect(() => {
@@ -317,6 +96,29 @@ export default function ProductsPage() {
     };
   }, [toast]);
 
+  async function loadAll() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [productData, categoryData, unitData] = await Promise.all([
+        getProducts(COMPANY_ID),
+        getCategories(COMPANY_ID),
+        getUnitsOfMeasure(COMPANY_ID),
+      ]);
+
+      setProducts(productData);
+      setCategories(categoryData);
+      setUnits(unitData);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load products."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadProducts() {
     try {
       setLoading(true);
@@ -327,38 +129,35 @@ export default function ProductsPage() {
       setProducts(data);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load products."
+        err instanceof Error ? err.message : "Failed to load products."
       );
     } finally {
       setLoading(false);
     }
   }
 
+  const categoryMap = useMemo(() => {
+    return new Map(categories.map((category) => [category.id, category]));
+  }, [categories]);
+
+  const unitMap = useMemo(() => {
+    return new Map(units.map((unit) => [unit.id, unit]));
+  }, [units]);
+
   const filteredProducts = useMemo(() => {
-    const normalizedSearch =
-      search.trim().toLowerCase();
+    const normalizedSearch = search.trim().toLowerCase();
 
     return products.filter((product) => {
       const matchesSearch =
         normalizedSearch.length === 0 ||
-        product.name
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        product.sku
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        (product.barcode ?? "")
-          .toLowerCase()
-          .includes(normalizedSearch);
+        product.name.toLowerCase().includes(normalizedSearch) ||
+        product.sku.toLowerCase().includes(normalizedSearch) ||
+        (product.barcode ?? "").toLowerCase().includes(normalizedSearch);
 
       const matchesStatus =
         statusFilter === "All Statuses" ||
-        (statusFilter === "Active" &&
-          product.active) ||
-        (statusFilter === "Inactive" &&
-          !product.active);
+        (statusFilter === "Active" && product.active) ||
+        (statusFilter === "Inactive" && !product.active);
 
       return matchesSearch && matchesStatus;
     });
@@ -375,7 +174,10 @@ export default function ProductsPage() {
   }
 
   function openCreateForm() {
-    setForm({ ...initialForm });
+    setForm({
+      ...initialForm,
+      unitOfMeasureId: units[0]?.id ?? "",
+    });
     setFormError(null);
     setShowCreateForm(true);
   }
@@ -427,9 +229,12 @@ export default function ProductsPage() {
     event.preventDefault();
 
     if (!form.sku.trim() || !form.name.trim()) {
-      setFormError(
-        "SKU and Product Name are required."
-      );
+      setFormError("SKU and Product Name are required.");
+      return;
+    }
+
+    if (!form.unitOfMeasureId) {
+      setFormError("Unit of Measure is required.");
       return;
     }
 
@@ -439,22 +244,18 @@ export default function ProductsPage() {
     try {
       const request: ProductCreateRequest = {
         companyId: COMPANY_ID,
-        categoryId: form.categoryId,
-        unitOfMeasureId: UNIT_OF_MEASURE_ID,
+        categoryId: form.categoryId || null,
+        unitOfMeasureId: form.unitOfMeasureId,
         sku: form.sku.trim(),
         name: form.name.trim(),
-        description:
-          form.description?.trim() || null,
-        barcode:
-          form.barcode?.trim() || null,
+        description: form.description?.trim() || null,
+        barcode: form.barcode?.trim() || null,
         costPrice:
-          form.costPrice === null ||
-          form.costPrice === undefined
+          form.costPrice === null || form.costPrice === undefined
             ? null
             : Number(form.costPrice),
         sellingPrice:
-          form.sellingPrice === null ||
-          form.sellingPrice === undefined
+          form.sellingPrice === null || form.sellingPrice === undefined
             ? null
             : Number(form.sellingPrice),
         active: form.active,
@@ -472,9 +273,7 @@ export default function ProductsPage() {
       });
     } catch (err) {
       setFormError(
-        err instanceof Error
-          ? err.message
-          : "Failed to create product."
+        err instanceof Error ? err.message : "Failed to create product."
       );
     } finally {
       setSaving(false);
@@ -491,9 +290,12 @@ export default function ProductsPage() {
     }
 
     if (!form.sku.trim() || !form.name.trim()) {
-      setFormError(
-        "SKU and Product Name are required."
-      );
+      setFormError("SKU and Product Name are required.");
+      return;
+    }
+
+    if (!form.unitOfMeasureId) {
+      setFormError("Unit of Measure is required.");
       return;
     }
 
@@ -503,33 +305,24 @@ export default function ProductsPage() {
     try {
       const request: ProductCreateRequest = {
         companyId: COMPANY_ID,
-        categoryId: form.categoryId,
-        unitOfMeasureId:
-          editingProduct.unitOfMeasureId,
+        categoryId: form.categoryId || null,
+        unitOfMeasureId: form.unitOfMeasureId,
         sku: form.sku.trim(),
         name: form.name.trim(),
-        description:
-          form.description?.trim() || null,
-        barcode:
-          form.barcode?.trim() || null,
+        description: form.description?.trim() || null,
+        barcode: form.barcode?.trim() || null,
         costPrice:
-          form.costPrice === null ||
-          form.costPrice === undefined
+          form.costPrice === null || form.costPrice === undefined
             ? null
             : Number(form.costPrice),
         sellingPrice:
-          form.sellingPrice === null ||
-          form.sellingPrice === undefined
+          form.sellingPrice === null || form.sellingPrice === undefined
             ? null
             : Number(form.sellingPrice),
         active: form.active,
       };
 
-      await updateProduct(
-        COMPANY_ID,
-        editingProduct.id,
-        request
-      );
+      await updateProduct(COMPANY_ID, editingProduct.id, request);
 
       await loadProducts();
 
@@ -541,9 +334,7 @@ export default function ProductsPage() {
       });
     } catch (err) {
       setFormError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update product."
+        err instanceof Error ? err.message : "Failed to update product."
       );
     } finally {
       setSaving(false);
@@ -552,12 +343,7 @@ export default function ProductsPage() {
 
   function openStatusDialog(product: Product) {
     setDialogProduct(product);
-
-    setDialogType(
-      product.active
-        ? "deactivate"
-        : "activate"
-    );
+    setDialogType(product.active ? "deactivate" : "activate");
   }
 
   function closeDialog() {
@@ -578,18 +364,12 @@ export default function ProductsPage() {
 
     try {
       if (dialogType === "deactivate") {
-        await deactivateProduct(
-          COMPANY_ID,
-          dialogProduct.id
-        );
+        await deactivateProduct(COMPANY_ID, dialogProduct.id);
 
         setProducts((current) =>
           current.map((product) =>
             product.id === dialogProduct.id
-              ? {
-                  ...product,
-                  active: false,
-                }
+              ? { ...product, active: false }
               : product
           )
         );
@@ -599,17 +379,14 @@ export default function ProductsPage() {
           message: `${dialogProduct.name} has been deactivated.`,
         });
       } else if (dialogType === "activate") {
-        const updatedProduct =
-          await activateProduct(
-            COMPANY_ID,
-            dialogProduct
-          );
+        const updatedProduct = await activateProduct(
+          COMPANY_ID,
+          dialogProduct
+        );
 
         setProducts((current) =>
           current.map((product) =>
-            product.id === updatedProduct.id
-              ? updatedProduct
-              : product
+            product.id === updatedProduct.id ? updatedProduct : product
           )
         );
 
@@ -633,24 +410,19 @@ export default function ProductsPage() {
     }
   }
 
-  function renderProductForm(
-    mode: "create" | "edit"
-  ) {
+  function renderProductForm(mode: "create" | "edit") {
     const isEdit = mode === "edit";
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-        <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+        <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-5">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                {isEdit
-                  ? "Edit Product"
-                  : "New Product"}
+              <h2 className="text-lg font-semibold text-ink">
+                {isEdit ? "Edit Product" : "New Product"}
               </h2>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-ink-muted">
                 {isEdit
                   ? "Update the product master information."
                   : "Create a product in the NextWare product master."}
@@ -659,216 +431,238 @@ export default function ProductsPage() {
 
             <button
               type="button"
-              onClick={
-                isEdit
-                  ? closeEditForm
-                  : closeCreateForm
-              }
+              onClick={isEdit ? closeEditForm : closeCreateForm}
               disabled={saving}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-active hover:text-ink-secondary disabled:cursor-not-allowed"
               aria-label="Close"
             >
               <CloseIcon />
             </button>
           </div>
 
-          <form
-            onSubmit={
-              isEdit
-                ? handleUpdateProduct
-                : handleCreateProduct
-            }
-          >
-            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
+          <form onSubmit={isEdit ? handleUpdateProduct : handleCreateProduct}>
+            <div className="px-6 py-6">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Basic Information
+              </p>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  SKU{" "}
-                  <span className="text-red-500">
-                    *
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    SKU <span className="text-danger">*</span>
+                  </label>
+
+                  <input
+                    type="text"
+                    required
+                    maxLength={100}
+                    value={form.sku}
+                    onChange={(event) =>
+                      updateForm("sku", event.target.value)
+                    }
+                    placeholder="e.g. NW-002"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Product Name <span className="text-danger">*</span>
+                  </label>
+
+                  <input
+                    type="text"
+                    required
+                    maxLength={255}
+                    value={form.name}
+                    onChange={(event) =>
+                      updateForm("name", event.target.value)
+                    }
+                    placeholder="Product name"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Description
+                  </label>
+
+                  <textarea
+                    rows={3}
+                    value={form.description ?? ""}
+                    onChange={(event) =>
+                      updateForm("description", event.target.value)
+                    }
+                    placeholder="Optional product description"
+                    className="w-full resize-none rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Barcode
+                  </label>
+
+                  <input
+                    type="text"
+                    maxLength={100}
+                    value={form.barcode ?? ""}
+                    onChange={(event) =>
+                      updateForm("barcode", event.target.value)
+                    }
+                    placeholder="Optional barcode"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+              </div>
+
+              <p className="mb-3 mt-7 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Classification
+              </p>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Category
+                  </label>
+
+                  <select
+                    value={form.categoryId ?? ""}
+                    onChange={(event) =>
+                      updateForm(
+                        "categoryId",
+                        event.target.value || null
+                      )
+                    }
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  >
+                    <option value="">No category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Unit of Measure <span className="text-danger">*</span>
+                  </label>
+
+                  <select
+                    required
+                    value={form.unitOfMeasureId}
+                    onChange={(event) =>
+                      updateForm("unitOfMeasureId", event.target.value)
+                    }
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  >
+                    <option value="" disabled>
+                      Select a unit
+                    </option>
+                    {units.map((unit) => (
+                      <option key={unit.id} value={unit.id}>
+                        {unit.code} — {unit.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {units.length === 0 && (
+                    <p className="mt-1.5 text-xs text-warning">
+                      No units of measure exist yet for this company.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <p className="mb-3 mt-7 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Pricing
+              </p>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Cost Price
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.costPrice ?? ""}
+                    onChange={(event) =>
+                      updateForm(
+                        "costPrice",
+                        event.target.value === ""
+                          ? null
+                          : Number(event.target.value)
+                      )
+                    }
+                    placeholder="0.00"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Selling Price
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.sellingPrice ?? ""}
+                    onChange={(event) =>
+                      updateForm(
+                        "sellingPrice",
+                        event.target.value === ""
+                          ? null
+                          : Number(event.target.value)
+                      )
+                    }
+                    placeholder="0.00"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+
+                <label className="flex items-center gap-3 rounded-lg border border-line bg-surface-hover px-4 py-3 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={form.active}
+                    onChange={(event) =>
+                      updateForm("active", event.target.checked)
+                    }
+                    className="h-4 w-4 rounded border-line-strong text-primary-600 focus:ring-primary-200"
+                  />
+
+                  <span>
+                    <span className="block text-sm font-medium text-ink-secondary">
+                      Active product
+                    </span>
+
+                    <span className="block text-xs text-ink-muted">
+                      Active products can be used in future transactions.
+                    </span>
                   </span>
                 </label>
-
-                <input
-                  type="text"
-                  required
-                  maxLength={100}
-                  value={form.sku}
-                  onChange={(event) =>
-                    updateForm(
-                      "sku",
-                      event.target.value
-                    )
-                  }
-                  placeholder="e.g. NW-002"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                />
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Product Name{" "}
-                  <span className="text-red-500">
-                    *
-                  </span>
-                </label>
-
-                <input
-                  type="text"
-                  required
-                  maxLength={255}
-                  value={form.name}
-                  onChange={(event) =>
-                    updateForm(
-                      "name",
-                      event.target.value
-                    )
-                  }
-                  placeholder="Product name"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Description
-                </label>
-
-                <textarea
-                  rows={3}
-                  value={form.description ?? ""}
-                  onChange={(event) =>
-                    updateForm(
-                      "description",
-                      event.target.value
-                    )
-                  }
-                  placeholder="Optional product description"
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Barcode
-                </label>
-
-                <input
-                  type="text"
-                  maxLength={100}
-                  value={form.barcode ?? ""}
-                  onChange={(event) =>
-                    updateForm(
-                      "barcode",
-                      event.target.value
-                    )
-                  }
-                  placeholder="Optional barcode"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Unit of Measure
-                </label>
-
-                <input
-                  type="text"
-                  value="EA — Each"
-                  disabled
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Cost Price
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.costPrice ?? ""}
-                  onChange={(event) =>
-                    updateForm(
-                      "costPrice",
-                      event.target.value === ""
-                        ? null
-                        : Number(
-                            event.target.value
-                          )
-                    )
-                  }
-                  placeholder="0.00"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Selling Price
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.sellingPrice ?? ""}
-                  onChange={(event) =>
-                    updateForm(
-                      "sellingPrice",
-                      event.target.value === ""
-                        ? null
-                        : Number(
-                            event.target.value
-                          )
-                    )
-                  }
-                  placeholder="0.00"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 md:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(event) =>
-                    updateForm(
-                      "active",
-                      event.target.checked
-                    )
-                  }
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-
-                <span>
-                  <span className="block text-sm font-medium text-slate-700">
-                    Active product
-                  </span>
-
-                  <span className="block text-xs text-slate-400">
-                    Active products can be used in
-                    future transactions.
-                  </span>
-                </span>
-              </label>
 
               {formError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 md:col-span-2">
+                <div className="mt-5 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3">
                   <div className="flex gap-3">
-                    <div className="mt-0.5 text-red-600">
+                    <div className="mt-0.5 text-danger">
                       <AlertIcon />
                     </div>
 
                     <div>
-                      <p className="text-sm font-semibold text-red-700">
+                      <p className="text-sm font-semibold text-danger">
                         Unable to save product
                       </p>
 
-                      <p className="mt-1 text-xs leading-5 text-red-600">
+                      <p className="mt-1 text-xs leading-5 text-danger">
                         {formError}
                       </p>
                     </div>
@@ -877,16 +671,12 @@ export default function ProductsPage() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+            <div className="flex justify-end gap-3 border-t border-line px-6 py-4">
               <button
                 type="button"
-                onClick={
-                  isEdit
-                    ? closeEditForm
-                    : closeCreateForm
-                }
+                onClick={isEdit ? closeEditForm : closeCreateForm}
                 disabled={saving}
-                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -894,7 +684,7 @@ export default function ProductsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving
                   ? isEdit
@@ -914,28 +704,27 @@ export default function ProductsPage() {
   return (
     <AppShell>
       <div className="p-6 lg:p-8">
-
         {/* HEADER */}
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-400">
+            <div className="mb-1 text-xs font-medium text-ink-muted">
               Master Data / Products
             </div>
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">
               Products
             </h1>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Manage products, SKUs, categories,
-              units, pricing, and product status.
+            <p className="mt-1 text-sm text-ink-muted">
+              Manage products, SKUs, categories, units, pricing, and product
+              status.
             </p>
           </div>
 
           <button
             type="button"
             onClick={openCreateForm}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
           >
             <PlusIcon />
             New Product
@@ -943,29 +732,25 @@ export default function ProductsPage() {
         </div>
 
         {/* FILTERS */}
-        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 md:flex-row">
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 md:flex-row">
           <div className="relative min-w-0 flex-1">
-            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
               <SearchIcon />
             </div>
 
             <input
               type="search"
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by product name, SKU, or barcode..."
-              className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-ink-muted focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
             />
           </div>
 
           <select
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value)
-            }
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-slate-400"
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
           >
             <option>All Statuses</option>
             <option>Active</option>
@@ -974,15 +759,14 @@ export default function ProductsPage() {
         </div>
 
         {/* TABLE */}
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+          <div className="flex items-center justify-between border-b border-line px-5 py-4">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-ink">
                 Product Catalog
               </h2>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-ink-muted">
                 {loading
                   ? "Loading products..."
                   : `${filteredProducts.length} products`}
@@ -992,8 +776,8 @@ export default function ProductsPage() {
             {!loading && !error && (
               <button
                 type="button"
-                onClick={loadProducts}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                onClick={loadAll}
+                className="rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink-secondary transition hover:bg-surface-hover hover:text-ink"
               >
                 Refresh
               </button>
@@ -1002,9 +786,9 @@ export default function ProductsPage() {
 
           {loading && (
             <div className="px-5 py-16 text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-700" />
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary-600" />
 
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-sm text-ink-muted">
                 Loading products from NextWare...
               </p>
             </div>
@@ -1012,22 +796,22 @@ export default function ProductsPage() {
 
           {!loading && error && (
             <div className="px-5 py-16 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
                 <AlertIcon />
               </div>
 
-              <p className="mt-4 text-sm font-semibold text-slate-800">
+              <p className="mt-4 text-sm font-semibold text-ink">
                 Unable to load products
               </p>
 
-              <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-slate-500">
+              <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-ink-muted">
                 {error}
               </p>
 
               <button
                 type="button"
-                onClick={loadProducts}
-                className="mt-5 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+                onClick={loadAll}
+                className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-primary-700"
               >
                 Try Again
               </button>
@@ -1038,31 +822,15 @@ export default function ProductsPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1050px] text-left">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50 text-xs text-slate-400">
-                    <th className="px-5 py-3 font-medium">
-                      SKU
-                    </th>
-
-                    <th className="px-5 py-3 font-medium">
-                      Product
-                    </th>
-
-                    <th className="px-5 py-3 font-medium">
-                      Category
-                    </th>
-
-                    <th className="px-5 py-3 font-medium">
-                      Unit
-                    </th>
-
+                  <tr className="border-b border-line bg-surface-hover text-xs text-ink-muted">
+                    <th className="px-5 py-3 font-medium">SKU</th>
+                    <th className="px-5 py-3 font-medium">Product</th>
+                    <th className="px-5 py-3 font-medium">Category</th>
+                    <th className="px-5 py-3 font-medium">Unit</th>
                     <th className="px-5 py-3 text-right font-medium">
                       Selling Price
                     </th>
-
-                    <th className="px-5 py-3 font-medium">
-                      Status
-                    </th>
-
+                    <th className="px-5 py-3 font-medium">Status</th>
                     <th className="px-5 py-3 text-right font-medium">
                       Actions
                     </th>
@@ -1072,83 +840,70 @@ export default function ProductsPage() {
                 <tbody>
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="px-5 py-16 text-center"
-                      >
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                      <td colSpan={7} className="px-5 py-16 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-active text-ink-muted">
                           <SearchIcon />
                         </div>
 
-                        <p className="mt-4 text-sm font-semibold text-slate-700">
+                        <p className="mt-4 text-sm font-semibold text-ink-secondary">
                           No products found
                         </p>
 
-                        <p className="mt-1 text-xs text-slate-400">
-                          Try changing your search or
-                          status filter.
+                        <p className="mt-1 text-xs text-ink-muted">
+                          Try changing your search or status filter.
                         </p>
                       </td>
                     </tr>
                   ) : (
-                    filteredProducts.map(
-                      (product) => (
+                    filteredProducts.map((product) => {
+                      const category = product.categoryId
+                        ? categoryMap.get(product.categoryId)
+                        : undefined;
+
+                      const unit = unitMap.get(product.unitOfMeasureId);
+
+                      return (
                         <tr
                           key={product.id}
-                          className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"
+                          className="border-b border-line last:border-0 hover:bg-surface-hover/70"
                         >
-                          <td className="px-5 py-4 text-sm font-semibold text-slate-800">
+                          <td className="px-5 py-4 text-sm font-semibold text-ink">
                             {product.sku}
                           </td>
 
                           <td className="px-5 py-4">
-                            <div className="text-sm font-medium text-slate-800">
+                            <div className="text-sm font-medium text-ink">
                               {product.name}
                             </div>
 
                             {product.description && (
-                              <div className="mt-1 max-w-md truncate text-xs text-slate-400">
+                              <div className="mt-1 max-w-md truncate text-xs text-ink-muted">
                                 {product.description}
                               </div>
                             )}
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-slate-500">
-                            {product.categoryId ??
-                              "—"}
+                          <td className="px-5 py-4 text-sm text-ink-muted">
+                            {category ? category.name : "—"}
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-slate-500">
-                            EA
+                          <td className="px-5 py-4 text-sm text-ink-muted">
+                            {unit ? unit.code : "—"}
                           </td>
 
-                          <td className="px-5 py-4 text-right text-sm font-medium text-slate-800">
-                            {product.sellingPrice !==
-                            null
-                              ? `$${product.sellingPrice.toFixed(
-                                  2
-                                )}`
+                          <td className="px-5 py-4 text-right text-sm font-medium text-ink">
+                            {product.sellingPrice !== null
+                              ? `$${product.sellingPrice.toFixed(2)}`
                               : "—"}
                           </td>
 
                           <td className="px-5 py-4">
-                            <span
-                              className={
-                                product.active
-                                  ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                                  : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
-                              }
-                            >
-                              {product.active
-                                ? "Active"
-                                : "Inactive"}
-                            </span>
+                            <StatusBadge active={product.active} />
                           </td>
 
                           {/* ACTION ICONS */}
                           <td className="px-5 py-4">
                             <div className="flex justify-end gap-2">
-
                               <IconButton
                                 label="View product"
                                 onClick={() =>
@@ -1164,11 +919,7 @@ export default function ProductsPage() {
 
                               <IconButton
                                 label="Edit product"
-                                onClick={() =>
-                                  openEditForm(
-                                    product
-                                  )
-                                }
+                                onClick={() => openEditForm(product)}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -1177,32 +928,23 @@ export default function ProductsPage() {
                                 <IconButton
                                   label="Deactivate product"
                                   danger
-                                  onClick={() =>
-                                    openStatusDialog(
-                                      product
-                                    )
-                                  }
+                                  onClick={() => openStatusDialog(product)}
                                 >
                                   <TrashIcon />
                                 </IconButton>
                               ) : (
                                 <IconButton
                                   label="Activate product"
-                                  onClick={() =>
-                                    openStatusDialog(
-                                      product
-                                    )
-                                  }
+                                  onClick={() => openStatusDialog(product)}
                                 >
                                   <PowerIcon />
                                 </IconButton>
                               )}
-
                             </div>
                           </td>
                         </tr>
-                      )
-                    )
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -1210,18 +952,14 @@ export default function ProductsPage() {
           )}
 
           {!loading && !error && (
-            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
-              <p className="text-xs text-slate-400">
-                Showing{" "}
-                {filteredProducts.length} of{" "}
-                {products.length} products
+            <div className="flex items-center justify-between border-t border-line px-5 py-4">
+              <p className="text-xs text-ink-muted">
+                Showing {filteredProducts.length} of {products.length}{" "}
+                products
               </p>
 
-              <p className="text-xs text-slate-400">
-                {products.filter(
-                  (product) => product.active
-                ).length}{" "}
-                active
+              <p className="text-xs text-ink-muted">
+                {products.filter((product) => product.active).length} active
               </p>
             </div>
           )}
@@ -1229,143 +967,112 @@ export default function ProductsPage() {
       </div>
 
       {/* CREATE MODAL */}
-      {showCreateForm &&
-        renderProductForm("create")}
+      {showCreateForm && renderProductForm("create")}
 
       {/* EDIT MODAL */}
-      {showEditForm &&
-        renderProductForm("edit")}
+      {showEditForm && renderProductForm("edit")}
 
       {/* STATUS CONFIRMATION DIALOG */}
-      {dialogType &&
-        dialogType !== "success" &&
-        dialogType !== "error" &&
-        dialogProduct && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
-
-              <div className="p-6">
-                <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                    dialogType === "deactivate"
-                      ? "bg-red-50 text-red-600"
-                      : "bg-emerald-50 text-emerald-600"
-                  }`}
-                >
-                  {dialogType ===
-                  "deactivate" ? (
-                    <TrashIcon />
-                  ) : (
-                    <PowerIcon />
-                  )}
-                </div>
-
-                <h2 className="mt-5 text-lg font-semibold text-slate-900">
-                  {dialogType ===
-                  "deactivate"
-                    ? "Deactivate product?"
-                    : "Activate product?"}
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {dialogType ===
-                  "deactivate"
-                    ? `Are you sure you want to deactivate "${dialogProduct.name}"? The product will remain in the product master, but it will be marked inactive.`
-                    : `Are you sure you want to activate "${dialogProduct.name}"? It will become available as an active product again.`}
-                </p>
-
-                <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3">
-                  <div className="flex justify-between gap-4 text-xs">
-                    <span className="text-slate-400">
-                      SKU
-                    </span>
-
-                    <span className="font-semibold text-slate-700">
-                      {dialogProduct.sku}
-                    </span>
-                  </div>
-                </div>
+      {dialogType && dialogProduct && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-surface shadow-2xl">
+            <div className="p-6">
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                  dialogType === "deactivate"
+                    ? "bg-danger-soft text-danger"
+                    : "bg-success-soft text-success"
+                }`}
+              >
+                {dialogType === "deactivate" ? <TrashIcon /> : <PowerIcon />}
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                <button
-                  type="button"
-                  onClick={closeDialog}
-                  disabled={actionLoading}
-                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
+              <h2 className="mt-5 text-lg font-semibold text-ink">
+                {dialogType === "deactivate"
+                  ? "Deactivate product?"
+                  : "Activate product?"}
+              </h2>
 
-                <button
-                  type="button"
-                  onClick={
-                    confirmStatusChange
-                  }
-                  disabled={actionLoading}
-                  className={`rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                    dialogType ===
-                    "deactivate"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-emerald-600 hover:bg-emerald-700"
-                  }`}
-                >
-                  {actionLoading
-                    ? "Processing..."
-                    : dialogType ===
-                      "deactivate"
-                    ? "Deactivate"
-                    : "Activate"}
-                </button>
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                {dialogType === "deactivate"
+                  ? `Are you sure you want to deactivate "${dialogProduct.name}"? The product will remain in the product master, but it will be marked inactive.`
+                  : `Are you sure you want to activate "${dialogProduct.name}"? It will become available as an active product again.`}
+              </p>
+
+              <div className="mt-4 rounded-lg bg-surface-hover px-4 py-3">
+                <div className="flex justify-between gap-4 text-xs">
+                  <span className="text-ink-muted">SKU</span>
+
+                  <span className="font-semibold text-ink-secondary">
+                    {dialogProduct.sku}
+                  </span>
+                </div>
               </div>
             </div>
+
+            <div className="flex justify-end gap-3 border-t border-line px-6 py-4">
+              <button
+                type="button"
+                onClick={closeDialog}
+                disabled={actionLoading}
+                className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmStatusChange}
+                disabled={actionLoading}
+                className={`rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  dialogType === "deactivate"
+                    ? "bg-danger hover:opacity-90"
+                    : "bg-success hover:opacity-90"
+                }`}
+              >
+                {actionLoading
+                  ? "Processing..."
+                  : dialogType === "deactivate"
+                  ? "Deactivate"
+                  : "Activate"}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
       {/* TOAST */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-[80] w-[calc(100%-3rem)] max-w-sm">
           <div
-            className={`flex items-start gap-3 rounded-xl border bg-white p-4 shadow-xl ${
-              toast.type === "success"
-                ? "border-emerald-200"
-                : "border-red-200"
+            className={`flex items-start gap-3 rounded-xl border bg-surface p-4 shadow-xl ${
+              toast.type === "success" ? "border-success/30" : "border-danger/30"
             }`}
           >
             <div
               className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                 toast.type === "success"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-red-50 text-red-600"
+                  ? "bg-success-soft text-success"
+                  : "bg-danger-soft text-danger"
               }`}
             >
-              {toast.type ===
-              "success" ? (
-                <CheckIcon />
-              ) : (
-                <AlertIcon />
-              )}
+              {toast.type === "success" ? <CheckIcon /> : <AlertIcon />}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-800">
-                {toast.type ===
-                "success"
-                  ? "Success"
-                  : "Something went wrong"}
+              <p className="text-sm font-semibold text-ink">
+                {toast.type === "success" ? "Success" : "Something went wrong"}
               </p>
 
-              <p className="mt-0.5 text-xs leading-5 text-slate-500">
+              <p className="mt-0.5 text-xs leading-5 text-ink-muted">
                 {toast.message}
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() =>
-                setToast(null)
-              }
-              className="text-slate-400 hover:text-slate-700"
+              onClick={() => setToast(null)}
+              className="text-ink-muted hover:text-ink-secondary"
               aria-label="Close notification"
             >
               <CloseIcon />

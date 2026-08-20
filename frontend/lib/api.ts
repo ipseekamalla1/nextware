@@ -153,6 +153,21 @@ export interface SupplierCreateRequest {
   active: boolean;
 }
 /* =========================================================
+   UNIT OF MEASURE
+========================================================= */
+
+export interface UnitOfMeasure {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* =========================================================
    ERROR HANDLING
 ========================================================= */
 
@@ -196,6 +211,35 @@ export async function checkBackendHealth(): Promise<string> {
   }
 
   return response.text();
+}
+
+/* =========================================================
+   UNIT OF MEASURE API
+========================================================= */
+
+export async function getUnitsOfMeasure(
+  companyId: string
+): Promise<UnitOfMeasure[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/unit-of-measures?companyId=${encodeURIComponent(
+      companyId
+    )}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load units of measure: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
 }
 
 /* =========================================================

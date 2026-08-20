@@ -1,204 +1,292 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatCard } from "@/components/ui/StatCard";
+import { Skeleton } from "@/components/ui/Skeleton";
+import {
+  BoxIcon,
+  LayersIcon,
+  TagIcon,
+  TruckIcon,
+  UsersIcon,
+} from "@/components/ui/nav-icons";
+import {
+  Category,
+  Customer,
+  Product,
+  Supplier,
+  getCategories,
+  getCustomers,
+  getProducts,
+  getSuppliers,
+} from "@/lib/api";
 
-const summaryCards = [
-  {
-    title: "Total Products",
-    value: "1,248",
-    change: "+12 this month",
-  },
-  {
-    title: "Inventory Value",
-    value: "$284,650",
-    change: "+4.8% this month",
-  },
-  {
-    title: "Open Purchase Orders",
-    value: "24",
-    change: "8 awaiting receipt",
-  },
-  {
-    title: "Open Sales Orders",
-    value: "37",
-    change: "12 ready to pick",
-  },
-];
+const COMPANY_ID = "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
-const recentOrders = [
-  {
-    order: "SO-2026-1042",
-    customer: "Northern Wholesale",
-    status: "Ready to Pick",
-    amount: "$4,280.00",
-  },
-  {
-    order: "SO-2026-1041",
-    customer: "Maple Distribution",
-    status: "Processing",
-    amount: "$2,145.50",
-  },
-  {
-    order: "SO-2026-1040",
-    customer: "Hamilton Supplies",
-    status: "Shipped",
-    amount: "$6,820.00",
-  },
-  {
-    order: "SO-2026-1039",
-    customer: "Ontario Retail Group",
-    status: "Processing",
-    amount: "$1,975.25",
-  },
-];
+function InboxIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+  );
+}
+
+function StatCardSkeleton() {
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-10 rounded-lg" />
+      </div>
+      <Skeleton className="mt-4 h-7 w-16" />
+      <Skeleton className="mt-3 h-3 w-28" />
+    </Card>
+  );
+}
+
+interface DashboardData {
+  products: Product[];
+  categories: Category[];
+  customers: Customer[];
+  suppliers: Supplier[];
+}
 
 export default function Home() {
+  const router = useRouter();
+
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  async function loadDashboard() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [products, categories, customers, suppliers] =
+        await Promise.all([
+          getProducts(COMPANY_ID),
+          getCategories(COMPANY_ID),
+          getCustomers(COMPANY_ID),
+          getSuppliers(COMPANY_ID),
+        ]);
+
+      setData({ products, categories, customers, suppliers });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load dashboard data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const today = new Date();
+
+  const dateLabel = today.toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const hour = today.getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+  const activeProducts = data?.products.filter((p) => p.active).length ?? 0;
+  const activeCustomers = data?.customers.filter((c) => c.active).length ?? 0;
+  const activeSuppliers = data?.suppliers.filter((s) => s.active).length ?? 0;
+  const totalProducts = data?.products.length ?? 0;
+  const totalCustomers = data?.customers.length ?? 0;
+  const totalSuppliers = data?.suppliers.length ?? 0;
+
+  const quickActions = [
+    {
+      label: "Add Product",
+      description: "Create a new product in the catalog",
+      href: "/products",
+      icon: BoxIcon,
+    },
+    {
+      label: "Add Category",
+      description: "Organize the product master data",
+      href: "/categories",
+      icon: TagIcon,
+    },
+    {
+      label: "Add Customer",
+      description: "Register a new customer account",
+      href: "/customers",
+      icon: UsersIcon,
+    },
+    {
+      label: "Add Supplier",
+      description: "Onboard a new supplier",
+      href: "/suppliers",
+      icon: TruckIcon,
+    },
+  ];
+
   return (
     <AppShell>
       <div className="p-6 lg:p-8">
         <div className="mb-8">
-          <p className="mb-1 text-sm font-medium text-slate-400">
-            Thursday, August 20, 2026
-          </p>
+          <p className="mb-1 text-sm font-medium text-ink-muted">{dateLabel}</p>
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Good morning
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            {greeting}
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-ink-secondary">
             Here is what is happening across your business today.
           </p>
         </div>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card) => (
-            <div
-              key={card.title}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <p className="text-sm font-medium text-slate-500">
-                {card.title}
-              </p>
+        {!loading && error && (
+          <div className="mb-6 rounded-xl border border-danger/20 bg-danger-soft px-6 py-5">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 text-danger">
+                <AlertIcon />
+              </div>
 
-              <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-                {card.value}
-              </p>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-danger">
+                  Unable to load dashboard data
+                </p>
 
-              <p className="mt-2 text-xs text-slate-400">
-                {card.change}
-              </p>
+                <p className="mt-1 text-sm text-danger">{error}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadDashboard}
+                className="rounded-lg bg-danger px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+              >
+                Try Again
+              </button>
             </div>
-          ))}
+          </div>
+        )}
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {loading ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          ) : (
+            <>
+              <StatCard
+                label="Total Products"
+                value={totalProducts}
+                helpText={`${activeProducts} active`}
+                tone="primary"
+                icon={<BoxIcon />}
+              />
+
+              <StatCard
+                label="Categories"
+                value={data?.categories.length ?? 0}
+                helpText="Product master data"
+                tone="info"
+                icon={<LayersIcon />}
+              />
+
+              <StatCard
+                label="Customers"
+                value={totalCustomers}
+                helpText={`${activeCustomers} active`}
+                tone="success"
+                icon={<UsersIcon />}
+              />
+
+              <StatCard
+                label="Suppliers"
+                value={totalSuppliers}
+                helpText={`${activeSuppliers} active`}
+                tone="warning"
+                icon={<TruckIcon />}
+              />
+            </>
+          )}
         </section>
 
         <section className="mt-6 grid gap-6 xl:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white xl:col-span-2">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Recent Sales Orders
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Latest customer orders and fulfillment status
-                </p>
-              </div>
-
-              <button className="text-xs font-semibold text-slate-700 hover:text-slate-900">
-                View all
-              </button>
+          <Card padded={false} className="xl:col-span-2">
+            <div className="border-b border-line px-5 py-4">
+              <h2 className="text-sm font-bold text-ink">Recent Activity</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Latest changes across your business
+              </p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-slate-100 text-xs text-slate-400">
-                    <th className="px-5 py-3 font-medium">Order</th>
-                    <th className="px-5 py-3 font-medium">Customer</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 text-right font-medium">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {recentOrders.map((order) => (
-                    <tr
-                      key={order.order}
-                      className="border-b border-slate-100 last:border-0"
-                    >
-                      <td className="px-5 py-4 text-sm font-semibold text-slate-800">
-                        {order.order}
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-slate-600">
-                        {order.customer}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                          {order.status}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4 text-right text-sm font-medium text-slate-800">
-                        {order.amount}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="p-6">
+              <EmptyState
+                icon={<InboxIcon />}
+                title="No activity feed yet"
+                description="Activity tracking for orders, receipts, and shipments will appear here once those modules are available."
+              />
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-5 py-4">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Quick Actions
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-400">
+          <Card padded={false}>
+            <div className="border-b border-line px-5 py-4">
+              <h2 className="text-sm font-bold text-ink">Quick Actions</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
                 Common operational tasks
               </p>
             </div>
 
             <div className="space-y-2 p-4">
-              <button className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left transition hover:bg-slate-50">
-                <div className="text-sm font-semibold text-slate-800">
-                  Create Sales Order
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Create a new customer order
-                </div>
-              </button>
-
-              <button className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left transition hover:bg-slate-50">
-                <div className="text-sm font-semibold text-slate-800">
-                  Create Purchase Order
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Order inventory from a supplier
-                </div>
-              </button>
-
-              <button className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left transition hover:bg-slate-50">
-                <div className="text-sm font-semibold text-slate-800">
-                  Receive Inventory
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Record an incoming shipment
-                </div>
-              </button>
-
-              <button className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left transition hover:bg-slate-50">
-                <div className="text-sm font-semibold text-slate-800">
-                  Inventory Adjustment
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Adjust warehouse stock
-                </div>
-              </button>
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => router.push(action.href)}
+                    className="flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition hover:border-line-strong hover:bg-surface-hover"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-600/10 text-primary-600">
+                      <Icon />
+                    </span>
+                    <span>
+                      <div className="text-sm font-semibold text-ink">
+                        {action.label}
+                      </div>
+                      <div className="mt-0.5 text-xs text-ink-muted">
+                        {action.description}
+                      </div>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          </Card>
         </section>
       </div>
     </AppShell>

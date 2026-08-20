@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
+  Category,
+  getCategories,
   getProduct,
-  updateProduct,
+  getUnitsOfMeasure,
   Product,
   ProductCreateRequest,
+  UnitOfMeasure,
+  updateProduct,
 } from "@/lib/api";
 
 const COMPANY_ID = "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
-
-const UNIT_OF_MEASURE_ID =
-  "a938839d-ca27-4a60-b25b-038a41b34236";
 
 /* =========================================================
    ICONS
@@ -113,7 +115,7 @@ function XIcon() {
    PAGE
 ========================================================= */
 
-export default function ProductViewPage() {
+function ProductViewPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -121,6 +123,9 @@ export default function ProductViewPage() {
 
   const [product, setProduct] =
     useState<Product | null>(null);
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<UnitOfMeasure[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -151,34 +156,6 @@ export default function ProductViewPage() {
      LOAD PRODUCT
   ======================================================= */
 
-  async function loadProduct() {
-    if (!productId) {
-      setError("Product ID is missing.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const data = await getProduct(
-        COMPANY_ID,
-        productId
-      );
-
-      setProduct(data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load product."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
     let cancelled = false;
 
@@ -196,13 +173,16 @@ export default function ProductViewPage() {
         setLoading(true);
         setError(null);
 
-        const data = await getProduct(
-          COMPANY_ID,
-          productId
-        );
+        const [productData, categoryData, unitData] = await Promise.all([
+          getProduct(COMPANY_ID, productId),
+          getCategories(COMPANY_ID),
+          getUnitsOfMeasure(COMPANY_ID),
+        ]);
 
         if (!cancelled) {
-          setProduct(data);
+          setProduct(productData);
+          setCategories(categoryData);
+          setUnits(unitData);
         }
       } catch (err) {
         if (!cancelled) {
@@ -226,6 +206,16 @@ export default function ProductViewPage() {
     };
   }, [productId]);
 
+  const categoryMap = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories]
+  );
+
+  const unitMap = useMemo(
+    () => new Map(units.map((unit) => [unit.id, unit])),
+    [units]
+  );
+
   /* =======================================================
      OPEN EDIT
   ======================================================= */
@@ -241,9 +231,7 @@ export default function ProductViewPage() {
     setEditForm({
       companyId: product.companyId,
       categoryId: product.categoryId,
-      unitOfMeasureId:
-        product.unitOfMeasureId ||
-        UNIT_OF_MEASURE_ID,
+      unitOfMeasureId: product.unitOfMeasureId,
       sku: product.sku,
       name: product.name,
       description: product.description,
@@ -315,9 +303,7 @@ export default function ProductViewPage() {
         categoryId:
           editForm.categoryId || null,
 
-        unitOfMeasureId:
-          editForm.unitOfMeasureId ||
-          UNIT_OF_MEASURE_ID,
+        unitOfMeasureId: editForm.unitOfMeasureId,
 
         sku: editForm.sku.trim(),
 
@@ -394,7 +380,7 @@ export default function ProductViewPage() {
             onClick={() =>
               router.push("/products")
             }
-            className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+            className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-ink-muted transition hover:text-ink"
           >
             <ArrowLeftIcon />
             Back to Products
@@ -403,15 +389,15 @@ export default function ProductViewPage() {
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
 
             <div>
-              <div className="mb-1 text-xs font-medium text-slate-400">
+              <div className="mb-1 text-xs font-medium text-ink-muted">
                 Master Data / Products / View
               </div>
 
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-ink">
                 Product Details
               </h1>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-ink-muted">
                 View and manage detailed product master
                 information.
               </p>
@@ -425,11 +411,11 @@ export default function ProductViewPage() {
         ================================================= */}
 
         {loading && (
-          <div className="rounded-xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
+          <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
 
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-700" />
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
 
-            <p className="mt-4 text-sm text-slate-500">
+            <p className="mt-4 text-sm text-ink-muted">
               Loading product...
             </p>
 
@@ -441,21 +427,21 @@ export default function ProductViewPage() {
         ================================================= */}
 
         {!loading && error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
 
             <div className="flex items-start gap-3">
 
-              <div className="text-red-600">
+              <div className="text-danger">
                 <AlertIcon />
               </div>
 
               <div>
 
-                <p className="text-sm font-semibold text-red-700">
+                <p className="text-sm font-semibold text-danger">
                   Unable to load product
                 </p>
 
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-danger">
                   {error}
                 </p>
 
@@ -464,7 +450,7 @@ export default function ProductViewPage() {
                   onClick={() =>
                     router.push("/products")
                   }
-                  className="mt-5 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                 >
                   Back to Products
                 </button>
@@ -479,19 +465,19 @@ export default function ProductViewPage() {
         ================================================= */}
 
         {!loading && !error && product && (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
 
             {/* PRODUCT HEADER */}
 
-            <div className="flex flex-col justify-between gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center">
+            <div className="flex flex-col justify-between gap-4 border-b border-line px-6 py-5 sm:flex-row sm:items-center">
 
               <div>
 
-                <h2 className="text-lg font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-ink">
                   {product.name}
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-ink-muted">
                   SKU: {product.sku}
                 </p>
 
@@ -501,17 +487,7 @@ export default function ProductViewPage() {
 
                 {/* STATUS */}
 
-                <span
-                  className={
-                    product.active
-                      ? "inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"
-                      : "inline-flex w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600"
-                  }
-                >
-                  {product.active
-                    ? "Active"
-                    : "Inactive"}
-                </span>
+                <StatusBadge active={product.active} className="px-3 py-1.5" />
 
                 {/* EDIT BUTTON */}
 
@@ -519,7 +495,7 @@ export default function ProductViewPage() {
                   type="button"
                   onClick={openEditModal}
                   title="Edit product"
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                 >
                   <EditIcon />
                   Edit Product
@@ -536,11 +512,11 @@ export default function ProductViewPage() {
               {/* SKU */}
 
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   SKU
                 </p>
 
-                <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                <p className="mt-1.5 text-sm font-semibold text-ink">
                   {product.sku}
                 </p>
               </div>
@@ -548,11 +524,11 @@ export default function ProductViewPage() {
               {/* PRODUCT NAME */}
 
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Product Name
                 </p>
 
-                <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                <p className="mt-1.5 text-sm font-semibold text-ink">
                   {product.name}
                 </p>
               </div>
@@ -561,11 +537,11 @@ export default function ProductViewPage() {
 
               <div className="md:col-span-2">
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Description
                 </p>
 
-                <p className="mt-1.5 text-sm leading-6 text-slate-700">
+                <p className="mt-1.5 text-sm leading-6 text-ink-secondary">
                   {product.description ||
                     "No description provided."}
                 </p>
@@ -576,11 +552,11 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Barcode
                 </p>
 
-                <p className="mt-1.5 text-sm text-slate-700">
+                <p className="mt-1.5 text-sm text-ink-secondary">
                   {product.barcode || "—"}
                 </p>
 
@@ -590,12 +566,15 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Unit of Measure
                 </p>
 
-                <p className="mt-1.5 text-sm text-slate-700">
-                  EA — Each
+                <p className="mt-1.5 text-sm text-ink-secondary">
+                  {(() => {
+                    const unit = unitMap.get(product.unitOfMeasureId);
+                    return unit ? `${unit.code} — ${unit.name}` : "—";
+                  })()}
                 </p>
 
               </div>
@@ -604,11 +583,11 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Cost Price
                 </p>
 
-                <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                <p className="mt-1.5 text-sm font-semibold text-ink">
                   {product.costPrice !== null
                     ? `$${product.costPrice.toFixed(
                         2
@@ -622,11 +601,11 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Selling Price
                 </p>
 
-                <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                <p className="mt-1.5 text-sm font-semibold text-ink">
                   {product.sellingPrice !== null
                     ? `$${product.sellingPrice.toFixed(
                         2
@@ -640,12 +619,14 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Category
                 </p>
 
-                <p className="mt-1.5 text-sm text-slate-700">
-                  {product.categoryId || "—"}
+                <p className="mt-1.5 text-sm text-ink-secondary">
+                  {product.categoryId
+                    ? categoryMap.get(product.categoryId)?.name ?? "—"
+                    : "—"}
                 </p>
 
               </div>
@@ -654,24 +635,12 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Status
                 </p>
 
                 <div className="mt-1.5">
-
-                  <span
-                    className={
-                      product.active
-                        ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                        : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
-                    }
-                  >
-                    {product.active
-                      ? "Active"
-                      : "Inactive"}
-                  </span>
-
+                  <StatusBadge active={product.active} />
                 </div>
 
               </div>
@@ -680,11 +649,11 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Created
                 </p>
 
-                <p className="mt-1.5 text-sm text-slate-700">
+                <p className="mt-1.5 text-sm text-ink-secondary">
                   {new Date(
                     product.createdAt
                   ).toLocaleString()}
@@ -696,11 +665,11 @@ export default function ProductViewPage() {
 
               <div>
 
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Last Updated
                 </p>
 
-                <p className="mt-1.5 text-sm text-slate-700">
+                <p className="mt-1.5 text-sm text-ink-secondary">
                   {new Date(
                     product.updatedAt
                   ).toLocaleString()}
@@ -712,14 +681,14 @@ export default function ProductViewPage() {
 
             {/* FOOTER */}
 
-            <div className="flex justify-between border-t border-slate-200 px-6 py-4">
+            <div className="flex justify-between border-t border-line px-6 py-4">
 
               <button
                 type="button"
                 onClick={() =>
                   router.push("/products")
                 }
-                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-surface-hover hover:text-ink"
               >
                 Back to Products
               </button>
@@ -727,7 +696,7 @@ export default function ProductViewPage() {
               <button
                 type="button"
                 onClick={openEditModal}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
               >
                 <EditIcon />
                 Edit Product
@@ -746,7 +715,7 @@ export default function ProductViewPage() {
 
       {showEditModal && editForm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
           onMouseDown={(event) => {
             if (
               event.target === event.currentTarget &&
@@ -757,26 +726,26 @@ export default function ProductViewPage() {
           }}
         >
 
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl">
 
             {/* MODAL HEADER */}
 
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-line px-6 py-5">
 
               <div>
 
                 <div className="flex items-center gap-2">
 
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-active text-ink-secondary">
                     <EditIcon />
                   </div>
 
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-lg font-semibold text-ink">
                       Edit Product
                     </h2>
 
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p className="mt-0.5 text-xs text-ink-muted">
                       Update product master information.
                     </p>
                   </div>
@@ -790,7 +759,7 @@ export default function ProductViewPage() {
                 onClick={closeEditModal}
                 disabled={updating}
                 title="Close"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-active hover:text-ink-secondary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <XIcon />
               </button>
@@ -807,9 +776,9 @@ export default function ProductViewPage() {
 
                 <div>
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                     SKU{" "}
-                    <span className="text-red-500">
+                    <span className="text-danger">
                       *
                     </span>
                   </label>
@@ -825,7 +794,7 @@ export default function ProductViewPage() {
                         event.target.value
                       )
                     }
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                   />
 
                 </div>
@@ -834,9 +803,9 @@ export default function ProductViewPage() {
 
                 <div>
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                     Product Name{" "}
-                    <span className="text-red-500">
+                    <span className="text-danger">
                       *
                     </span>
                   </label>
@@ -852,7 +821,7 @@ export default function ProductViewPage() {
                         event.target.value
                       )
                     }
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                   />
 
                 </div>
@@ -861,7 +830,7 @@ export default function ProductViewPage() {
 
                 <div className="md:col-span-2">
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                     Description
                   </label>
 
@@ -877,7 +846,7 @@ export default function ProductViewPage() {
                       )
                     }
                     placeholder="Optional product description"
-                    className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                    className="w-full resize-none rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                   />
 
                 </div>
@@ -886,7 +855,7 @@ export default function ProductViewPage() {
 
                 <div>
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                     Barcode
                   </label>
 
@@ -903,8 +872,36 @@ export default function ProductViewPage() {
                       )
                     }
                     placeholder="Optional barcode"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                   />
+
+                </div>
+
+                {/* CATEGORY */}
+
+                <div>
+
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Category
+                  </label>
+
+                  <select
+                    value={editForm.categoryId ?? ""}
+                    onChange={(event) =>
+                      updateEditForm(
+                        "categoryId",
+                        event.target.value || null
+                      )
+                    }
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  >
+                    <option value="">No category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
 
                 </div>
 
@@ -912,16 +909,31 @@ export default function ProductViewPage() {
 
                 <div>
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Unit of Measure
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Unit of Measure{" "}
+                    <span className="text-danger">*</span>
                   </label>
 
-                  <input
-                    type="text"
-                    value="EA — Each"
-                    disabled
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
-                  />
+                  <select
+                    required
+                    value={editForm.unitOfMeasureId}
+                    onChange={(event) =>
+                      updateEditForm(
+                        "unitOfMeasureId",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                  >
+                    <option value="" disabled>
+                      Select a unit
+                    </option>
+                    {units.map((unit) => (
+                      <option key={unit.id} value={unit.id}>
+                        {unit.code} — {unit.name}
+                      </option>
+                    ))}
+                  </select>
 
                 </div>
 
@@ -929,7 +941,7 @@ export default function ProductViewPage() {
 
                 <div>
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                     Cost Price
                   </label>
 
@@ -951,7 +963,7 @@ export default function ProductViewPage() {
                       )
                     }
                     placeholder="0.00"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                   />
 
                 </div>
@@ -960,7 +972,7 @@ export default function ProductViewPage() {
 
                 <div>
 
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                     Selling Price
                   </label>
 
@@ -982,7 +994,7 @@ export default function ProductViewPage() {
                       )
                     }
                     placeholder="0.00"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                    className="w-full rounded-lg border border-line px-3 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                   />
 
                 </div>
@@ -991,7 +1003,7 @@ export default function ProductViewPage() {
 
                 <div className="md:col-span-2">
 
-                  <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-slate-100">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-line bg-surface-hover px-4 py-3 transition hover:bg-surface-active">
 
                     <input
                       type="checkbox"
@@ -1004,16 +1016,16 @@ export default function ProductViewPage() {
                           event.target.checked
                         )
                       }
-                      className="h-4 w-4 rounded border-slate-300"
+                      className="h-4 w-4 rounded border-line-strong"
                     />
 
                     <div>
 
-                      <p className="text-sm font-medium text-slate-700">
+                      <p className="text-sm font-medium text-ink-secondary">
                         Active Product
                       </p>
 
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-ink-muted">
                         Product can be used in active
                         inventory operations.
                       </p>
@@ -1027,21 +1039,21 @@ export default function ProductViewPage() {
                 {/* ERROR */}
 
                 {updateError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 md:col-span-2">
+                  <div className="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 md:col-span-2">
 
                     <div className="flex items-start gap-3">
 
-                      <div className="mt-0.5 text-red-600">
+                      <div className="mt-0.5 text-danger">
                         <AlertIcon />
                       </div>
 
                       <div>
 
-                        <p className="text-sm font-semibold text-red-700">
+                        <p className="text-sm font-semibold text-danger">
                           Unable to update product
                         </p>
 
-                        <p className="mt-1 text-xs leading-5 text-red-600">
+                        <p className="mt-1 text-xs leading-5 text-danger">
                           {updateError}
                         </p>
 
@@ -1055,21 +1067,21 @@ export default function ProductViewPage() {
                 {/* SUCCESS */}
 
                 {updateSuccess && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 md:col-span-2">
+                  <div className="rounded-xl border border-success/30 bg-success-soft px-4 py-3 md:col-span-2">
 
                     <div className="flex items-center gap-3">
 
-                      <div className="text-emerald-600">
+                      <div className="text-success">
                         <CheckIcon />
                       </div>
 
                       <div>
 
-                        <p className="text-sm font-semibold text-emerald-700">
+                        <p className="text-sm font-semibold text-success">
                           Product updated successfully
                         </p>
 
-                        <p className="mt-0.5 text-xs text-emerald-600">
+                        <p className="mt-0.5 text-xs text-success">
                           Your product information has been
                           saved.
                         </p>
@@ -1087,13 +1099,13 @@ export default function ProductViewPage() {
                   MODAL FOOTER
               ================================================= */}
 
-              <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <div className="flex items-center justify-end gap-3 border-t border-line px-6 py-4">
 
                 <button
                   type="button"
                   onClick={closeEditModal}
                   disabled={updating}
-                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1104,7 +1116,7 @@ export default function ProductViewPage() {
                     updating ||
                     updateSuccess
                   }
-                  className="inline-flex min-w-[145px] items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-w-[145px] items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
 
                   {updating ? (
@@ -1130,5 +1142,25 @@ export default function ProductViewPage() {
       )}
 
     </AppShell>
+  );
+}
+
+function ViewPageFallback() {
+  return (
+    <AppShell>
+      <div className="p-6 lg:p-8">
+        <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+export default function ProductViewPage() {
+  return (
+    <Suspense fallback={<ViewPageFallback />}>
+      <ProductViewPageContent />
+    </Suspense>
   );
 }

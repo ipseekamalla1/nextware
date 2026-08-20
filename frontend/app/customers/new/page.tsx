@@ -97,12 +97,12 @@ function SectionTitle({
   description: string;
 }) {
   return (
-    <div className="mb-5 border-b border-slate-200 pb-3">
-      <h2 className="text-base font-semibold text-slate-900">
+    <div className="mb-5 border-b border-line pb-3">
+      <h2 className="text-base font-semibold text-ink">
         {title}
       </h2>
 
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-ink-muted">
         {description}
       </p>
     </div>
@@ -126,11 +126,11 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">
+      <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
         {label}
 
         {required && (
-          <span className="text-red-500"> *</span>
+          <span className="text-danger"> *</span>
         )}
       </label>
 
@@ -142,7 +142,7 @@ function InputField({
         }
         required={required}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+        className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
       />
     </div>
   );
@@ -267,22 +267,22 @@ export default function NewCustomerPage() {
             onClick={() =>
               router.push("/customers")
             }
-            className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+            className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-ink-muted transition hover:text-ink"
           >
             <ArrowLeftIcon />
             Back to Customers
           </button>
 
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-400">
+            <div className="mb-1 text-xs font-medium text-ink-muted">
               Master Data / Customers / New
             </div>
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">
               New Customer
             </h1>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-ink-muted">
               Create a new customer record.
             </p>
           </div>
@@ -296,7 +296,7 @@ export default function NewCustomerPage() {
         >
           {/* BASIC INFORMATION */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
             <SectionTitle
               title="Customer Information"
               description="Basic customer identification and contact information."
@@ -349,7 +349,7 @@ export default function NewCustomerPage() {
 
           {/* BILLING */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
             <SectionTitle
               title="Billing Address"
               description="Customer billing address."
@@ -443,7 +443,7 @@ export default function NewCustomerPage() {
 
           {/* SHIPPING */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
             <SectionTitle
               title="Shipping Address"
               description="Customer shipping and delivery address."
@@ -488,10 +488,10 @@ export default function NewCustomerPage() {
                       }));
                     }
                   }}
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded border-line-strong"
                 />
 
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-ink-secondary">
                   Same as billing address
                 </span>
               </label>
@@ -587,7 +587,7 @@ export default function NewCustomerPage() {
 
           {/* STATUS */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
             <SectionTitle
               title="Status"
               description="Control whether this customer is currently active."
@@ -603,15 +603,15 @@ export default function NewCustomerPage() {
                     event.target.checked
                   )
                 }
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-line-strong"
               />
 
               <div>
-                <div className="text-sm font-medium text-slate-700">
+                <div className="text-sm font-medium text-ink-secondary">
                   Active customer
                 </div>
 
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-ink-muted">
                   Active customers are available for business transactions.
                 </div>
               </div>
@@ -621,13 +621,13 @@ export default function NewCustomerPage() {
           {/* ERROR */}
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+            <div className="rounded-xl border border-danger/30 bg-danger-soft px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="text-red-600">
+                <div className="text-danger">
                   <AlertIcon />
                 </div>
 
-                <div className="text-sm text-red-700">
+                <div className="text-sm text-danger">
                   {error}
                 </div>
               </div>
@@ -643,7 +643,7 @@ export default function NewCustomerPage() {
                 router.push("/customers")
               }
               disabled={saving}
-              className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-surface-hover disabled:opacity-50"
             >
               Cancel
             </button>
@@ -651,7 +651,7 @@ export default function NewCustomerPage() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? (
                 "Creating..."

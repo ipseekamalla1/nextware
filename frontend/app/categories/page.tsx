@@ -12,6 +12,18 @@ import {
   Category,
   CategoryCreateRequest,
 } from "@/lib/api";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { IconButton } from "@/components/ui/IconButton";
+import {
+  AlertIcon,
+  CheckIcon,
+  CloseIcon,
+  EditIcon,
+  EyeIcon,
+  PlusIcon,
+  PowerIcon,
+  SearchIcon,
+} from "@/components/ui/icons";
 
 const COMPANY_ID =
   "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
@@ -27,195 +39,6 @@ type DialogType =
   | "deactivate"
   | "activate"
   | null;
-
-function EyeIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function PowerIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 2v10" />
-      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m6 6 12 12" />
-      <path d="m18 6-12 12" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m5 12 4 4L19 6" />
-    </svg>
-  );
-}
-
-function AlertIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4" />
-      <path d="M12 16h.01" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-4-4" />
-    </svg>
-  );
-}
-
-function IconButton({
-  label,
-  onClick,
-  children,
-  danger = false,
-  disabled = false,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
-        onClick={onClick}
-        disabled={disabled}
-        className={`flex h-9 w-9 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
-          danger
-            ? "border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-            : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-        }`}
-      >
-        {children}
-      </button>
-
-      <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-lg transition group-hover:opacity-100">
-        {label}
-      </div>
-    </div>
-  );
-}
 
 export default function CategoriesPage() {
   const router = useRouter();
@@ -588,17 +411,17 @@ export default function CategoriesPage() {
         ================================================= */}
 
         <div className="mb-6">
-          <div className="mb-1 text-xs font-medium text-slate-400">
+          <div className="mb-1 text-xs font-medium text-ink-muted">
             Master Data / Categories
           </div>
 
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-ink">
                 Categories
               </h1>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-ink-muted">
                 Manage product categories used throughout NextWare.
               </p>
             </div>
@@ -606,7 +429,7 @@ export default function CategoriesPage() {
             <button
               type="button"
               onClick={openCreateForm}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
             >
               <PlusIcon />
               New Category
@@ -618,10 +441,10 @@ export default function CategoriesPage() {
             TOOLBAR
         ================================================= */}
 
-        <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-muted">
                 <SearchIcon />
               </div>
 
@@ -632,7 +455,7 @@ export default function CategoriesPage() {
                   setSearch(event.target.value)
                 }
                 placeholder="Search categories..."
-                className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-ink-muted focus:border-primary-400"
               />
             </div>
 
@@ -641,7 +464,7 @@ export default function CategoriesPage() {
               onChange={(event) =>
                 setStatusFilter(event.target.value)
               }
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
               <option>All Statuses</option>
               <option>Active</option>
@@ -655,25 +478,25 @@ export default function CategoriesPage() {
         ================================================= */}
 
         {!loading && error && (
-          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+          <div className="mb-5 rounded-xl border border-danger/30 bg-danger-soft px-5 py-4">
             <div className="flex items-start gap-3">
-              <div className="pt-0.5 text-red-600">
+              <div className="pt-0.5 text-danger">
                 <AlertIcon />
               </div>
 
               <div>
-                <p className="text-sm font-semibold text-red-700">
+                <p className="text-sm font-semibold text-danger">
                   Unable to load categories
                 </p>
 
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-danger">
                   {error}
                 </p>
 
                 <button
                   type="button"
                   onClick={loadCategories}
-                  className="mt-3 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+                  className="mt-3 rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-700"
                 >
                   Try Again
                 </button>
@@ -687,27 +510,27 @@ export default function CategoriesPage() {
         ================================================= */}
 
         {!error && (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
 
             {loading ? (
               <div className="px-6 py-16 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-700" />
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
 
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-4 text-sm text-ink-muted">
                   Loading categories...
                 </p>
               </div>
             ) : filteredCategories.length === 0 ? (
               <div className="px-6 py-16 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-active text-ink-muted">
                   <SearchIcon />
                 </div>
 
-                <h3 className="mt-4 text-sm font-semibold text-slate-900">
+                <h3 className="mt-4 text-sm font-semibold text-ink">
                   No categories found
                 </h3>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-ink-muted">
                   {search || statusFilter !== "All Statuses"
                     ? "Try changing your search or status filter."
                     : "Create your first category to get started."}
@@ -719,7 +542,7 @@ export default function CategoriesPage() {
                     <button
                       type="button"
                       onClick={openCreateForm}
-                      className="mt-4 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"
+                      className="mt-4 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
                     >
                       Create Category
                     </button>
@@ -729,20 +552,20 @@ export default function CategoriesPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <tr className="border-b border-line bg-surface-hover">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Category Name
                       </th>
 
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Description
                       </th>
 
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Status
                       </th>
 
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
                         Actions
                       </th>
                     </tr>
@@ -753,7 +576,7 @@ export default function CategoriesPage() {
                       (category) => (
                         <tr
                           key={category.id}
-                          className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
+                          className="border-b border-line last:border-b-0 hover:bg-surface-hover"
                         >
                           <td className="px-5 py-4">
                             <button
@@ -763,31 +586,24 @@ export default function CategoriesPage() {
                                   category
                                 )
                               }
-                              className="text-left text-sm font-semibold text-slate-800 hover:text-slate-950 hover:underline"
+                              className="text-left text-sm font-semibold text-ink hover:text-ink hover:underline"
                             >
                               {category.name}
                             </button>
                           </td>
 
                           <td className="max-w-md px-5 py-4">
-                            <p className="truncate text-sm text-slate-500">
+                            <p className="truncate text-sm text-ink-muted">
                               {category.description ||
                                 "—"}
                             </p>
                           </td>
 
                           <td className="px-5 py-4">
-                            <span
-                              className={
-                                category.active
-                                  ? "inline-flex rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"
-                                  : "inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600"
-                              }
-                            >
-                              {category.active
-                                ? "Active"
-                                : "Inactive"}
-                            </span>
+                            <StatusBadge
+                              active={category.active}
+                              className="px-3 py-1.5"
+                            />
                           </td>
 
                           <td className="px-5 py-4">
@@ -843,14 +659,14 @@ export default function CategoriesPage() {
 
             {!loading &&
               filteredCategories.length > 0 && (
-                <div className="border-t border-slate-200 bg-slate-50 px-5 py-3">
-                  <p className="text-xs text-slate-400">
+                <div className="border-t border-line bg-surface-hover px-5 py-3">
+                  <p className="text-xs text-ink-muted">
                     Showing{" "}
-                    <span className="font-medium text-slate-600">
+                    <span className="font-medium text-ink-secondary">
                       {filteredCategories.length}
                     </span>{" "}
                     of{" "}
-                    <span className="font-medium text-slate-600">
+                    <span className="font-medium text-ink-secondary">
                       {categories.length}
                     </span>{" "}
                     categories
@@ -867,18 +683,18 @@ export default function CategoriesPage() {
         {toast && (
           <div className="fixed bottom-5 right-5 z-50 w-[min(420px,calc(100vw-40px))]">
             <div
-              className={`rounded-xl border bg-white px-4 py-3 shadow-xl ${
+              className={`rounded-xl border bg-surface px-4 py-3 shadow-xl ${
                 toast.type === "success"
-                  ? "border-emerald-200"
-                  : "border-red-200"
+                  ? "border-success/30"
+                  : "border-danger/30"
               }`}
             >
               <div className="flex items-start gap-3">
                 <div
                   className={
                     toast.type === "success"
-                      ? "text-emerald-600"
-                      : "text-red-600"
+                      ? "text-success"
+                      : "text-danger"
                   }
                 >
                   {toast.type === "success" ? (
@@ -888,14 +704,14 @@ export default function CategoriesPage() {
                   )}
                 </div>
 
-                <p className="flex-1 text-sm font-medium text-slate-700">
+                <p className="flex-1 text-sm font-medium text-ink-secondary">
                   {toast.message}
                 </p>
 
                 <button
                   type="button"
                   onClick={() => setToast(null)}
-                  className="text-slate-400 hover:text-slate-700"
+                  className="text-ink-muted hover:text-ink-secondary"
                 >
                   <CloseIcon />
                 </button>
@@ -909,15 +725,15 @@ export default function CategoriesPage() {
         ================================================= */}
 
         {showCreateForm && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
-            <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-line bg-surface shadow-2xl">
+              <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">
+                  <h2 className="text-base font-semibold text-ink">
                     New Category
                   </h2>
 
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-ink-muted">
                     Create a new product category.
                   </p>
                 </div>
@@ -926,7 +742,7 @@ export default function CategoriesPage() {
                   type="button"
                   onClick={closeCreateForm}
                   disabled={saving}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink-secondary disabled:opacity-50"
                 >
                   <CloseIcon />
                 </button>
@@ -935,9 +751,9 @@ export default function CategoriesPage() {
               <form onSubmit={handleCreateCategory}>
                 <div className="grid gap-5 p-5">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                       Category Name{" "}
-                      <span className="text-red-500">
+                      <span className="text-danger">
                         *
                       </span>
                     </label>
@@ -955,12 +771,12 @@ export default function CategoriesPage() {
                       maxLength={150}
                       autoFocus
                       placeholder="e.g. Electronics"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+                      className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                       Description
                     </label>
 
@@ -977,7 +793,7 @@ export default function CategoriesPage() {
                       maxLength={500}
                       rows={4}
                       placeholder="Enter a description for this category..."
-                      className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+                      className="w-full resize-none rounded-lg border border-line px-3 py-2.5 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
                     />
                   </div>
 
@@ -991,39 +807,39 @@ export default function CategoriesPage() {
                           event.target.checked
                         )
                       }
-                      className="h-4 w-4 rounded border-slate-300"
+                      className="h-4 w-4 rounded border-line-strong"
                     />
 
                     <span>
-                      <span className="block text-sm font-medium text-slate-700">
+                      <span className="block text-sm font-medium text-ink-secondary">
                         Active category
                       </span>
 
-                      <span className="block text-xs text-slate-400">
+                      <span className="block text-xs text-ink-muted">
                         Allow this category to be used in NextWare.
                       </span>
                     </span>
                   </label>
 
                   {formError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                      <p className="text-sm font-medium text-red-700">
+                    <div className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3">
+                      <p className="text-sm font-medium text-danger">
                         Unable to create category
                       </p>
 
-                      <p className="mt-1 text-xs text-red-600">
+                      <p className="mt-1 text-xs text-danger">
                         {formError}
                       </p>
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
+                <div className="flex justify-end gap-3 border-t border-line px-5 py-4">
                   <button
                     type="button"
                     onClick={closeCreateForm}
                     disabled={saving}
-                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1031,7 +847,7 @@ export default function CategoriesPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving
                       ? "Creating..."
@@ -1048,15 +864,15 @@ export default function CategoriesPage() {
         ================================================= */}
 
         {showEditForm && editingCategory && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
-            <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-line bg-surface shadow-2xl">
+              <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">
+                  <h2 className="text-base font-semibold text-ink">
                     Edit Category
                   </h2>
 
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-ink-muted">
                     Update category information.
                   </p>
                 </div>
@@ -1065,7 +881,7 @@ export default function CategoriesPage() {
                   type="button"
                   onClick={closeEditForm}
                   disabled={saving}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink-secondary disabled:opacity-50"
                 >
                   <CloseIcon />
                 </button>
@@ -1074,9 +890,9 @@ export default function CategoriesPage() {
               <form onSubmit={handleUpdateCategory}>
                 <div className="grid gap-5 p-5">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                       Category Name{" "}
-                      <span className="text-red-500">
+                      <span className="text-danger">
                         *
                       </span>
                     </label>
@@ -1093,12 +909,12 @@ export default function CategoriesPage() {
                       required
                       maxLength={150}
                       autoFocus
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+                      className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
                       Description
                     </label>
 
@@ -1114,7 +930,7 @@ export default function CategoriesPage() {
                       }
                       maxLength={500}
                       rows={4}
-                      className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+                      className="w-full resize-none rounded-lg border border-line px-3 py-2.5 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
                     />
                   </div>
 
@@ -1128,39 +944,39 @@ export default function CategoriesPage() {
                           event.target.checked
                         )
                       }
-                      className="h-4 w-4 rounded border-slate-300"
+                      className="h-4 w-4 rounded border-line-strong"
                     />
 
                     <span>
-                      <span className="block text-sm font-medium text-slate-700">
+                      <span className="block text-sm font-medium text-ink-secondary">
                         Active category
                       </span>
 
-                      <span className="block text-xs text-slate-400">
+                      <span className="block text-xs text-ink-muted">
                         Inactive categories remain in the database but are not active.
                       </span>
                     </span>
                   </label>
 
                   {formError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                      <p className="text-sm font-medium text-red-700">
+                    <div className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3">
+                      <p className="text-sm font-medium text-danger">
                         Unable to update category
                       </p>
 
-                      <p className="mt-1 text-xs text-red-600">
+                      <p className="mt-1 text-xs text-danger">
                         {formError}
                       </p>
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
+                <div className="flex justify-end gap-3 border-t border-line px-5 py-4">
                   <button
                     type="button"
                     onClick={closeEditForm}
                     disabled={saving}
-                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1168,7 +984,7 @@ export default function CategoriesPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving
                       ? "Saving..."
@@ -1185,22 +1001,22 @@ export default function CategoriesPage() {
         ================================================= */}
 
         {dialogType && dialogCategory && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-            <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-xl border border-line bg-surface shadow-2xl">
               <div className="p-5">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-active text-ink-secondary">
                     <PowerIcon />
                   </div>
 
                   <div>
-                    <h2 className="text-base font-semibold text-slate-900">
+                    <h2 className="text-base font-semibold text-ink">
                       {dialogType === "deactivate"
                         ? "Deactivate Category"
                         : "Activate Category"}
                     </h2>
 
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
                       {dialogType === "deactivate"
                         ? `Are you sure you want to deactivate "${dialogCategory.name}"?`
                         : `Are you sure you want to activate "${dialogCategory.name}"?`}
@@ -1208,7 +1024,7 @@ export default function CategoriesPage() {
 
                     {dialogType ===
                       "deactivate" && (
-                      <p className="mt-2 text-xs text-slate-400">
+                      <p className="mt-2 text-xs text-ink-muted">
                         The category will remain in the database and can be activated again later.
                       </p>
                     )}
@@ -1216,12 +1032,12 @@ export default function CategoriesPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
+              <div className="flex justify-end gap-3 border-t border-line px-5 py-4">
                 <button
                   type="button"
                   onClick={closeDialog}
                   disabled={actionLoading}
-                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1230,7 +1046,7 @@ export default function CategoriesPage() {
                   type="button"
                   onClick={confirmStatusChange}
                   disabled={actionLoading}
-                  className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {actionLoading
                     ? "Processing..."

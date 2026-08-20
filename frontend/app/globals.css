@@ -1,8 +1,101 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+
+  /* Surface / layout tokens (resolved at runtime via CSS custom properties below) */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* Text tokens */
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-inverted: var(--ink-inverted);
+
+  /* Semantic status tokens */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --shadow-card: var(--card-shadow);
+  --shadow-elevated: var(--elevated-shadow);
+}
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --canvas: #f6f7fb;
+  --surface: #ffffff;
+  --surface-hover: #f4f5f9;
+  --surface-active: #ecedf5;
+
+  --line: #e7e9f0;
+  --line-strong: #d7dae4;
+
+  --ink: #10131c;
+  --ink-secondary: #565e6d;
+  --ink-muted: #8b93a3;
+  --ink-inverted: #ffffff;
+
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --info: #2563eb;
+  --info-soft: #eff6ff;
+
+  --card-shadow: 0 1px 2px 0 rgba(16, 24, 40, 0.04);
+  --elevated-shadow: 0 4px 8px -2px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.04);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #14161b;
+  --surface: #1b1d24;
+  --surface-hover: #23262e;
+  --surface-active: #2b2e38;
+
+  --line: #2a2d36;
+  --line-strong: #383c48;
+
+  --ink: #f3f4f7;
+  --ink-secondary: #a7aebb;
+  --ink-muted: #6d7484;
+  --ink-inverted: #10131c;
+
+  --success: #34d399;
+  --success-soft: #12271e;
+  --warning: #fbbf24;
+  --warning-soft: #2c2108;
+  --danger: #f87171;
+  --danger-soft: #2c1316;
+  --info: #60a5fa;
+  --info-soft: #12233a;
+
+  --card-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --elevated-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+
+  color-scheme: dark;
 }
 
 * {
@@ -16,9 +109,10 @@ body {
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 button,
@@ -26,8 +120,56 @@ input,
 select,
 textarea {
   font: inherit;
+  color: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+::selection {
+  background: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--line-strong);
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root[data-theme="dark"] .theme-icon-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-dark {
+  display: flex;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
