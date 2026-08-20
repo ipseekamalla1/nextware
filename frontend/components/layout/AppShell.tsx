@@ -1,42 +1,44 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 const navigation = [
   {
     section: "Main",
     items: [
-      { label: "Dashboard", icon: "▦" },
+      { label: "Dashboard", icon: "▦", href: "/" },
     ],
   },
   {
     section: "Master Data",
     items: [
-      { label: "Products", icon: "▣" },
-      { label: "Customers", icon: "♙" },
-      { label: "Suppliers", icon: "◈" },
+      { label: "Products", icon: "▣", href: "/products" },
+      { label: "Categories", icon: "◫", href: "/categories" },
+      { label: "Customers", icon: "♙", href: "/customers" },
+      { label: "Suppliers", icon: "◈", href: "/suppliers" },
     ],
   },
   {
     section: "Operations",
     items: [
-      { label: "Inventory", icon: "▤" },
-      { label: "Warehouses", icon: "⌂" },
-      { label: "Purchasing", icon: "↙" },
-      { label: "Sales", icon: "↗" },
-      { label: "Fulfillment", icon: "□" },
+      { label: "Inventory", icon: "▤", href: "/inventory" },
+      { label: "Warehouses", icon: "⌂", href: "/warehouses" },
+      { label: "Purchasing", icon: "↙", href: "/purchasing" },
+      { label: "Sales", icon: "↗", href: "/sales" },
+      { label: "Fulfillment", icon: "□", href: "/fulfillment" },
     ],
   },
   {
     section: "Insights",
     items: [
-      { label: "Reports", icon: "▥" },
+      { label: "Reports", icon: "▥", href: "/reports" },
     ],
   },
   {
     section: "System",
     items: [
-      { label: "Administration", icon: "⚙" },
+      { label: "Administration", icon: "⚙", href: "/administration" },
     ],
   },
 ];
@@ -47,6 +49,9 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
@@ -66,6 +71,7 @@ export default function AppShell({
                 <div className="text-base font-bold tracking-tight">
                   NextWare
                 </div>
+
                 <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                   ERP & WMS
                 </div>
@@ -84,13 +90,18 @@ export default function AppShell({
               )}
 
               <div className="space-y-1">
-                {group.items.map((item, index) => {
+                {group.items.map((item) => {
                   const isActive =
-                    item.label === "Dashboard" && group.section === "Main";
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname === item.href ||
+                        pathname.startsWith(`${item.href}/`);
 
                   return (
                     <button
                       key={item.label}
+                      type="button"
+                      onClick={() => router.push(item.href)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                         isActive
                           ? "bg-slate-900 text-white"
@@ -128,6 +139,7 @@ export default function AppShell({
                 <div className="truncate text-sm font-medium">
                   User
                 </div>
+
                 <div className="truncate text-xs text-slate-400">
                   Administrator
                 </div>
@@ -141,6 +153,7 @@ export default function AppShell({
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6">
           <div className="flex items-center gap-4">
             <button
+              type="button"
               onClick={() => setSidebarCollapsed((value) => !value)}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
               aria-label="Toggle sidebar"
@@ -150,16 +163,46 @@ export default function AppShell({
 
             <div>
               <div className="text-sm font-semibold text-slate-900">
-                Dashboard
+                {pathname === "/"
+                  ? "Dashboard"
+                  : pathname.startsWith("/products")
+                  ? "Products"
+                  : pathname.startsWith("/categories")
+                  ? "Categories"
+                  : pathname.startsWith("/customers")
+                  ? "Customers"
+                  : pathname.startsWith("/suppliers")
+                  ? "Suppliers"
+                  : pathname.startsWith("/inventory")
+                  ? "Inventory"
+                  : pathname.startsWith("/warehouses")
+                  ? "Warehouses"
+                  : pathname.startsWith("/purchasing")
+                  ? "Purchasing"
+                  : pathname.startsWith("/sales")
+                  ? "Sales"
+                  : pathname.startsWith("/fulfillment")
+                  ? "Fulfillment"
+                  : pathname.startsWith("/reports")
+                  ? "Reports"
+                  : pathname.startsWith("/administration")
+                  ? "Administration"
+                  : "Dashboard"}
               </div>
+
               <div className="text-xs text-slate-400">
-                Business overview
+                {pathname === "/"
+                  ? "Business overview"
+                  : pathname.startsWith("/categories")
+                  ? "Category master data"
+                  : "NextWare ERP & WMS"}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
+              type="button"
               className="hidden rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-500 transition hover:bg-slate-50 sm:block"
               aria-label="Search"
             >
@@ -167,6 +210,7 @@ export default function AppShell({
             </button>
 
             <button
+              type="button"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
               aria-label="Notifications"
             >
@@ -174,6 +218,7 @@ export default function AppShell({
             </button>
 
             <button
+              type="button"
               className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white"
               aria-label="User profile"
             >
