@@ -55,6 +55,61 @@ export interface CategoryCreateRequest {
 }
 
 /* =========================================================
+   CUSTOMER
+========================================================= */
+
+export interface Customer {
+  id: string;
+  companyId: string;
+  customerCode: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+
+  billingAddressLine1: string | null;
+  billingAddressLine2: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingPostalCode: string | null;
+  billingCountry: string | null;
+
+  shippingAddressLine1: string | null;
+  shippingAddressLine2: string | null;
+  shippingCity: string | null;
+  shippingState: string | null;
+  shippingPostalCode: string | null;
+  shippingCountry: string | null;
+
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerCreateRequest {
+  companyId: string;
+  customerCode: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+
+  billingAddressLine1: string | null;
+  billingAddressLine2: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingPostalCode: string | null;
+  billingCountry: string | null;
+
+  shippingAddressLine1: string | null;
+  shippingAddressLine2: string | null;
+  shippingCity: string | null;
+  shippingState: string | null;
+  shippingPostalCode: string | null;
+  shippingCountry: string | null;
+
+  active: boolean;
+}
+
+/* =========================================================
    ERROR HANDLING
 ========================================================= */
 
@@ -255,9 +310,6 @@ export async function activateProduct(
    CATEGORY API
 ========================================================= */
 
-/**
- * Get all categories belonging to a company.
- */
 export async function getCategories(
   companyId: string
 ): Promise<Category[]> {
@@ -283,9 +335,6 @@ export async function getCategories(
   return response.json();
 }
 
-/**
- * Get one category by ID.
- */
 export async function getCategory(
   companyId: string,
   categoryId: string
@@ -312,22 +361,16 @@ export async function getCategory(
   return response.json();
 }
 
-/**
- * Create a new category.
- */
 export async function createCategory(
   request: CategoryCreateRequest
 ): Promise<Category> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/categories`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -341,9 +384,6 @@ export async function createCategory(
   return response.json();
 }
 
-/**
- * Update an existing category.
- */
 export async function updateCategory(
   companyId: string,
   categoryId: string,
@@ -374,11 +414,6 @@ export async function updateCategory(
   return response.json();
 }
 
-/**
- * Deactivate an existing category.
- *
- * The backend performs a soft delete by setting active=false.
- */
 export async function deactivateCategory(
   companyId: string,
   categoryId: string
@@ -402,11 +437,6 @@ export async function deactivateCategory(
   }
 }
 
-/**
- * Activate an inactive category.
- *
- * Activation uses the existing PUT endpoint.
- */
 export async function activateCategory(
   companyId: string,
   category: Category
@@ -423,4 +453,163 @@ export async function activateCategory(
     category.id,
     request
   );
+}
+
+/* =========================================================
+   CUSTOMER API
+========================================================= */
+
+export async function getCustomers(
+  companyId: string
+): Promise<Customer[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/customers?companyId=${encodeURIComponent(
+      companyId
+    )}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load customers: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function getCustomer(
+  companyId: string,
+  customerId: string
+): Promise<Customer> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+      customerId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load customer: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function createCustomer(
+  request: CustomerCreateRequest
+): Promise<Customer> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/customers`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to create customer: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function updateCustomer(
+  companyId: string,
+  customerId: string,
+  request: CustomerCreateRequest
+): Promise<Customer> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+      customerId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to update customer: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function deactivateCustomer(
+  companyId: string,
+  customerId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+      customerId
+    )}?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to deactivate customer: ${response.status}`
+      )
+    );
+  }
+}
+
+export async function activateCustomer(
+  companyId: string,
+  customer: Customer
+): Promise<Customer> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+      customer.id
+    )}/activate?companyId=${encodeURIComponent(companyId)}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to activate customer: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
 }
