@@ -31,10 +31,16 @@ public class ProductCreateRequest {
     @Size(max = 100)
     private String barcode;
 
-    @DecimalMin(value = "0.0", inclusive = true)
+    @DecimalMin(
+            value = "0.0",
+            inclusive = true
+    )
     private BigDecimal costPrice;
 
-    @DecimalMin(value = "0.0", inclusive = true)
+    @DecimalMin(
+            value = "0.0",
+            inclusive = true
+    )
     private BigDecimal sellingPrice;
 
     private Boolean active;
@@ -43,7 +49,9 @@ public class ProductCreateRequest {
         return companyId;
     }
 
-    public void setCompanyId(UUID companyId) {
+    public void setCompanyId(
+            UUID companyId
+    ) {
         this.companyId = companyId;
     }
 
@@ -51,7 +59,9 @@ public class ProductCreateRequest {
         return categoryId;
     }
 
-    public void setCategoryId(UUID categoryId) {
+    public void setCategoryId(
+            UUID categoryId
+    ) {
         this.categoryId = categoryId;
     }
 
@@ -59,15 +69,20 @@ public class ProductCreateRequest {
         return unitOfMeasureId;
     }
 
-    public void setUnitOfMeasureId(UUID unitOfMeasureId) {
-        this.unitOfMeasureId = unitOfMeasureId;
+    public void setUnitOfMeasureId(
+            UUID unitOfMeasureId
+    ) {
+        this.unitOfMeasureId =
+                unitOfMeasureId;
     }
 
     public String getSku() {
         return sku;
     }
 
-    public void setSku(String sku) {
+    public void setSku(
+            String sku
+    ) {
         this.sku = sku;
     }
 
@@ -75,7 +90,9 @@ public class ProductCreateRequest {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(
+            String name
+    ) {
         this.name = name;
     }
 
@@ -83,7 +100,9 @@ public class ProductCreateRequest {
         return description;
     }
 
-    public void setDescription(String description) {
+    public void setDescription(
+            String description
+    ) {
         this.description = description;
     }
 
@@ -91,7 +110,9 @@ public class ProductCreateRequest {
         return barcode;
     }
 
-    public void setBarcode(String barcode) {
+    public void setBarcode(
+            String barcode
+    ) {
         this.barcode = barcode;
     }
 
@@ -99,7 +120,9 @@ public class ProductCreateRequest {
         return costPrice;
     }
 
-    public void setCostPrice(BigDecimal costPrice) {
+    public void setCostPrice(
+            BigDecimal costPrice
+    ) {
         this.costPrice = costPrice;
     }
 
@@ -107,15 +130,20 @@ public class ProductCreateRequest {
         return sellingPrice;
     }
 
-    public void setSellingPrice(BigDecimal sellingPrice) {
-        this.sellingPrice = sellingPrice;
+    public void setSellingPrice(
+            BigDecimal sellingPrice
+    ) {
+        this.sellingPrice =
+                sellingPrice;
     }
 
     public Boolean getActive() {
         return active;
     }
 
-    public void setActive(Boolean active) {
+    public void setActive(
+            Boolean active
+    ) {
         this.active = active;
     }
 }

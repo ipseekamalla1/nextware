@@ -44,7 +44,10 @@ public class ProductController {
             @PathVariable UUID productId
     ) {
         return ResponseEntity.ok(
-                productService.getProduct(companyId, productId)
+                productService.getProduct(
+                        companyId,
+                        productId
+                )
         );
     }
 
@@ -54,7 +57,11 @@ public class ProductController {
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(productService.createProduct(request));
+                .body(
+                        productService.createProduct(
+                                request
+                        )
+                );
     }
 
     @PutMapping("/{productId}")
@@ -72,12 +79,18 @@ public class ProductController {
         );
     }
 
+    /**
+     * Soft delete / deactivate product.
+     */
     @DeleteMapping("/{productId}")
     public ResponseEntity<Void> deactivateProduct(
             @RequestParam UUID companyId,
             @PathVariable UUID productId
     ) {
-        productService.deactivateProduct(companyId, productId);
+        productService.deactivateProduct(
+                companyId,
+                productId
+        );
 
         return ResponseEntity.noContent().build();
     }

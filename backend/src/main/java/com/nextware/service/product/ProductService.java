@@ -26,91 +26,166 @@ public class ProductService {
         this.productMapper = productMapper;
     }
 
-    public List<ProductResponse> getProducts(UUID companyId) {
+    /**
+     * Get all products belonging to a company.
+     */
+    public List<ProductResponse> getProducts(
+            UUID companyId
+    ) {
         return productRepository
-                .findAllByCompanyIdOrderByNameAsc(companyId)
+                .findAllByCompanyIdOrderByNameAsc(
+                        companyId
+                )
                 .stream()
                 .map(productMapper::toResponse)
                 .toList();
     }
 
-    public ProductResponse getProduct(UUID companyId, UUID productId) {
-        Product product = productRepository
-                .findByIdAndCompanyId(productId, companyId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Product not found"
-                ));
+    /**
+     * Get one product belonging to a company.
+     */
+    public ProductResponse getProduct(
+            UUID companyId,
+            UUID productId
+    ) {
+        Product product =
+                productRepository
+                        .findByIdAndCompanyId(
+                                productId,
+                                companyId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Product not found"
+                                        )
+                        );
 
         return productMapper.toResponse(product);
     }
 
-    public ProductResponse createProduct(ProductCreateRequest request) {
-        String sku = request.getSku().trim();
+    /**
+     * Create a product.
+     */
+    public ProductResponse createProduct(
+            ProductCreateRequest request
+    ) {
+        String sku =
+                request.getSku().trim();
 
-        if (productRepository.existsByCompanyIdAndSku(
-                request.getCompanyId(),
-                sku
-        )) {
+        if (
+                productRepository
+                        .existsByCompanyIdAndSku(
+                                request.getCompanyId(),
+                                sku
+                        )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "A product with this SKU already exists for the company"
             );
         }
 
-        Product product = productMapper.toEntity(request);
+        Product product =
+                productMapper.toEntity(request);
 
-        Product savedProduct = productRepository.save(product);
+        Product savedProduct =
+                productRepository.save(product);
 
-        return productMapper.toResponse(savedProduct);
+        return productMapper.toResponse(
+                savedProduct
+        );
     }
 
+    /**
+     * Update a product.
+     */
     public ProductResponse updateProduct(
             UUID companyId,
             UUID productId,
             ProductCreateRequest request
     ) {
-        if (!companyId.equals(request.getCompanyId())) {
+
+        if (
+                !companyId.equals(
+                        request.getCompanyId()
+                )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Company ID cannot be changed"
             );
         }
 
-        Product product = productRepository
-                .findByIdAndCompanyId(productId, companyId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Product not found"
-                ));
+        Product product =
+                productRepository
+                        .findByIdAndCompanyId(
+                                productId,
+                                companyId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Product not found"
+                                        )
+                        );
 
-        String sku = request.getSku().trim();
+        String sku =
+                request.getSku().trim();
 
-        if (productRepository.existsByCompanyIdAndSkuAndIdNot(
-                companyId,
-                sku,
-                productId
-        )) {
+        if (
+                productRepository
+                        .existsByCompanyIdAndSkuAndIdNot(
+                                companyId,
+                                sku,
+                                productId
+                        )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "A product with this SKU already exists for the company"
             );
         }
 
-        productMapper.updateEntity(product, request);
+        productMapper.updateEntity(
+                product,
+                request
+        );
 
-        Product updatedProduct = productRepository.save(product);
+        Product updatedProduct =
+                productRepository.save(product);
 
-        return productMapper.toResponse(updatedProduct);
+        return productMapper.toResponse(
+                updatedProduct
+        );
     }
 
-    public void deactivateProduct(UUID companyId, UUID productId) {
-        Product product = productRepository
-                .findByIdAndCompanyId(productId, companyId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Product not found"
-                ));
+    /**
+     * Soft delete / deactivate a product.
+     */
+    public void deactivateProduct(
+            UUID companyId,
+            UUID productId
+    ) {
+        Product product =
+                productRepository
+                        .findByIdAndCompanyId(
+                                productId,
+                                companyId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Product not found"
+                                        )
+                        );
+
+        if (!product.isActive()) {
+            return;
+        }
 
         product.setActive(false);
 

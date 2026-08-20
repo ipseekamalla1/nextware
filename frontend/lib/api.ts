@@ -29,47 +29,42 @@ export interface ProductCreateRequest {
   active: boolean;
 }
 
-/**
- * Create a new product.
- */
-export async function createProduct(
-  request: ProductCreateRequest
-): Promise<Product> {
-  const response = await fetch(`${API_BASE_URL}/api/products`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  });
+async function getErrorMessage(
+  response: Response,
+  fallback: string
+): Promise<string> {
+  try {
+    const errorBody = await response.json();
 
-  if (!response.ok) {
-    let message = `Failed to create product: ${response.status}`;
-
-    try {
-      const errorBody = await response.json();
-
-      if (errorBody?.message) {
-        message = errorBody.message;
-      }
-    } catch {
-      // Keep default message.
+    if (typeof errorBody?.message === "string") {
+      return errorBody.message;
     }
 
-    throw new Error(message);
+    if (typeof errorBody?.error === "string") {
+      return errorBody.error;
+    }
+  } catch {
+    // Response may not contain JSON.
   }
 
-  return response.json();
+  return fallback;
 }
 
 /**
  * Check whether the Spring Boot backend is reachable.
  */
 export async function checkBackendHealth(): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/api/health`);
+  const response = await fetch(`${API_BASE_URL}/api/health`, {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
-    throw new Error(`Backend request failed: ${response.status}`);
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Backend request failed: ${response.status}`
+      )
+    );
   }
 
   return response.text();
@@ -86,24 +81,18 @@ export async function getProducts(
       companyId
     )}`,
     {
+      method: "GET",
       cache: "no-store",
     }
   );
 
   if (!response.ok) {
-    let message = `Failed to load products: ${response.status}`;
-
-    try {
-      const errorBody = await response.json();
-
-      if (errorBody?.message) {
-        message = errorBody.message;
-      }
-    } catch {
-      // Keep default message.
-    }
-
-    throw new Error(message);
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load products: ${response.status}`
+      )
+    );
   }
 
   return response.json();
@@ -111,9 +100,6 @@ export async function getProducts(
 
 /**
  * Get one product by ID.
- *
- * The company ID is included because the backend uses
- * company context when accessing product data.
  */
 export async function getProduct(
   companyId: string,
@@ -124,24 +110,44 @@ export async function getProduct(
       productId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
+      method: "GET",
       cache: "no-store",
     }
   );
 
   if (!response.ok) {
-    let message = `Failed to load product: ${response.status}`;
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load product: ${response.status}`
+      )
+    );
+  }
 
-    try {
-      const errorBody = await response.json();
+  return response.json();
+}
 
-      if (errorBody?.message) {
-        message = errorBody.message;
-      }
-    } catch {
-      // Keep default message.
-    }
+/**
+ * Create a new product.
+ */
+export async function createProduct(
+  request: ProductCreateRequest
+): Promise<Product> {
+  const response = await fetch(`${API_BASE_URL}/api/products`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
 
-    throw new Error(message);
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to create product: ${response.status}`
+      )
+    );
   }
 
   return response.json();
@@ -169,19 +175,12 @@ export async function updateProduct(
   );
 
   if (!response.ok) {
-    let message = `Failed to update product: ${response.status}`;
-
-    try {
-      const errorBody = await response.json();
-
-      if (errorBody?.message) {
-        message = errorBody.message;
-      }
-    } catch {
-      // Keep default message.
-    }
-
-    throw new Error(message);
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to update product: ${response.status}`
+      )
+    );
   }
 
   return response.json();
@@ -189,6 +188,8 @@ export async function updateProduct(
 
 /**
  * Deactivate an existing product.
+ *
+ * The backend performs a soft delete by setting active=false.
  */
 export async function deactivateProduct(
   companyId: string,
@@ -204,18 +205,37 @@ export async function deactivateProduct(
   );
 
   if (!response.ok) {
-    let message = `Failed to deactivate product: ${response.status}`;
-
-    try {
-      const errorBody = await response.json();
-
-      if (errorBody?.message) {
-        message = errorBody.message;
-      }
-    } catch {
-      // Keep default message.
-    }
-
-    throw new Error(message);
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to deactivate product: ${response.status}`
+      )
+    );
   }
+}
+
+/**
+ * Activate an inactive product.
+ *
+ * Activation uses the existing PUT endpoint because the backend
+ * already supports changing the active flag.
+ */
+export async function activateProduct(
+  companyId: string,
+  product: Product
+): Promise<Product> {
+  const request: ProductCreateRequest = {
+    companyId: product.companyId,
+    categoryId: product.categoryId,
+    unitOfMeasureId: product.unitOfMeasureId,
+    sku: product.sku,
+    name: product.name,
+    description: product.description,
+    barcode: product.barcode,
+    costPrice: product.costPrice,
+    sellingPrice: product.sellingPrice,
+    active: true,
+  };
+
+  return updateProduct(companyId, product.id, request);
 }

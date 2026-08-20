@@ -7,13 +7,24 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ProductRepository extends JpaRepository<Product, UUID> {
+public interface ProductRepository
+        extends JpaRepository<Product, UUID> {
 
-    List<Product> findAllByCompanyIdOrderByNameAsc(UUID companyId);
+    List<Product>
+    findAllByCompanyIdOrderByNameAsc(
+            UUID companyId
+    );
 
-    Optional<Product> findByIdAndCompanyId(UUID id, UUID companyId);
+    Optional<Product>
+    findByIdAndCompanyId(
+            UUID id,
+            UUID companyId
+    );
 
-    boolean existsByCompanyIdAndSku(UUID companyId, String sku);
+    boolean existsByCompanyIdAndSku(
+            UUID companyId,
+            String sku
+    );
 
     boolean existsByCompanyIdAndSkuAndIdNot(
             UUID companyId,
