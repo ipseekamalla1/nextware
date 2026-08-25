@@ -19,8 +19,6 @@ import {
   SearchIcon,
 } from "@/components/ui/icons";
 
-const DEFAULT_WAREHOUSE_ID = "b2917abd-7cb7-4a21-b5be-14ce1d06449e";
-
 const LOCATION_TYPES = [
   "RECEIVING",
   "STORAGE",
@@ -37,27 +35,14 @@ export default function WarehouseLocationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const warehouseId =
-    searchParams.get("warehouseId") ||
-    DEFAULT_WAREHOUSE_ID;
+  const warehouseId = searchParams.get("warehouseId");
 
-  const [locations, setLocations] =
-    useState<WarehouseLocation[]>([]);
-
-  const [search, setSearch] =
-    useState("");
-
-  const [typeFilter, setTypeFilter] =
-    useState("All Types");
-
-  const [statusFilter, setStatusFilter] =
-    useState("All Statuses");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState<string | null>(null);
+  const [locations, setLocations] = useState<WarehouseLocation[]>([]);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All Types");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [dialogType, setDialogType] =
     useState<DialogType>(null);
@@ -74,10 +59,9 @@ export default function WarehouseLocationsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!warehouseId ||
-        warehouseId === DEFAULT_WAREHOUSE_ID) {
+    if (!warehouseId) {
       setError(
-        "A valid warehouse ID is required."
+        "Warehouse ID is missing. Please open Warehouse Locations from a warehouse."
       );
       setLoading(false);
       return;
@@ -101,14 +85,17 @@ export default function WarehouseLocationsPage() {
   }, [toast]);
 
   async function loadLocations() {
+    if (!warehouseId) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const data =
-        await getWarehouseLocations(
-          warehouseId
-        );
+      const data = await getWarehouseLocations(
+        warehouseId
+      );
 
       setLocations(data);
     } catch (err) {
@@ -187,7 +174,8 @@ export default function WarehouseLocationsPage() {
   async function confirmStatusChange() {
     if (
       !dialogLocation ||
-      !dialogType
+      !dialogType ||
+      !warehouseId
     ) {
       return;
     }
@@ -195,9 +183,7 @@ export default function WarehouseLocationsPage() {
     try {
       setActionLoading(true);
 
-      if (
-        dialogType === "deactivate"
-      ) {
+      if (dialogType === "deactivate") {
         await deactivateWarehouseLocation(
           warehouseId,
           dialogLocation.id
@@ -205,8 +191,7 @@ export default function WarehouseLocationsPage() {
 
         setLocations((current) =>
           current.map((location) =>
-            location.id ===
-            dialogLocation.id
+            location.id === dialogLocation.id
               ? {
                   ...location,
                   active: false,
@@ -229,8 +214,7 @@ export default function WarehouseLocationsPage() {
 
         setLocations((current) =>
           current.map((location) =>
-            location.id ===
-            dialogLocation.id
+            location.id === dialogLocation.id
               ? updated
               : location
           )
@@ -243,7 +227,8 @@ export default function WarehouseLocationsPage() {
         });
       }
 
-      closeDialog();
+      setDialogType(null);
+      setDialogLocation(null);
     } catch (err) {
       setToast({
         type: "error",
@@ -258,6 +243,13 @@ export default function WarehouseLocationsPage() {
   }
 
   function openNewLocation() {
+    if (!warehouseId) {
+      setError(
+        "Warehouse ID is missing."
+      );
+      return;
+    }
+
     router.push(
       `/warehouse-locations/new?warehouseId=${encodeURIComponent(
         warehouseId
@@ -265,9 +257,11 @@ export default function WarehouseLocationsPage() {
     );
   }
 
-  function openView(
-    locationId: string
-  ) {
+  function openView(locationId: string) {
+    if (!warehouseId) {
+      return;
+    }
+
     router.push(
       `/warehouse-locations/view?id=${encodeURIComponent(
         locationId
@@ -277,9 +271,11 @@ export default function WarehouseLocationsPage() {
     );
   }
 
-  function openEdit(
-    locationId: string
-  ) {
+  function openEdit(locationId: string) {
+    if (!warehouseId) {
+      return;
+    }
+
     router.push(
       `/warehouse-locations/view?id=${encodeURIComponent(
         locationId
@@ -314,14 +310,16 @@ export default function WarehouseLocationsPage() {
               </h1>
 
               <p className="mt-1 text-sm text-ink-muted">
-                Manage receiving, storage, picking, packing and shipping locations.
+                Manage receiving, storage, picking,
+                packing and shipping locations.
               </p>
             </div>
 
             <button
               type="button"
               onClick={openNewLocation}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+              disabled={!warehouseId}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <PlusIcon />
               New Location
@@ -329,74 +327,76 @@ export default function WarehouseLocationsPage() {
           </div>
         </div>
 
-        <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-muted">
-                <SearchIcon />
+        {warehouseId && (
+          <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row">
+              <div className="relative flex-1">
+                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-muted">
+                  <SearchIcon />
+                </div>
+
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Search locations..."
+                  className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
+                />
               </div>
 
-              <input
-                type="text"
-                value={search}
+              <select
+                value={typeFilter}
                 onChange={(event) =>
-                  setSearch(
+                  setTypeFilter(
                     event.target.value
                   )
                 }
-                placeholder="Search locations..."
-                className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
-              />
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
+              >
+                <option>
+                  All Types
+                </option>
+
+                {LOCATION_TYPES.map(
+                  (type) => (
+                    <option
+                      key={type}
+                      value={type}
+                    >
+                      {type}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value
+                  )
+                }
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
+              >
+                <option>
+                  All Statuses
+                </option>
+
+                <option>
+                  Active
+                </option>
+
+                <option>
+                  Inactive
+                </option>
+              </select>
             </div>
-
-            <select
-              value={typeFilter}
-              onChange={(event) =>
-                setTypeFilter(
-                  event.target.value
-                )
-              }
-              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
-            >
-              <option>
-                All Types
-              </option>
-
-              {LOCATION_TYPES.map(
-                (type) => (
-                  <option
-                    key={type}
-                    value={type}
-                  >
-                    {type}
-                  </option>
-                )
-              )}
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(
-                  event.target.value
-                )
-              }
-              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
-            >
-              <option>
-                All Statuses
-              </option>
-
-              <option>
-                Active
-              </option>
-
-              <option>
-                Inactive
-              </option>
-            </select>
           </div>
-        </div>
+        )}
 
         {loading && (
           <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
@@ -420,10 +420,12 @@ export default function WarehouseLocationsPage() {
 
             <button
               type="button"
-              onClick={loadLocations}
+              onClick={() =>
+                router.push("/warehouses")
+              }
               className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
             >
-              Try Again
+              Back to Warehouses
             </button>
           </div>
         )}
@@ -438,8 +440,7 @@ export default function WarehouseLocationsPage() {
 
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
                 {search ||
-                typeFilter !==
-                  "All Types" ||
+                typeFilter !== "All Types" ||
                 statusFilter !==
                   "All Statuses"
                   ? "No locations match your current filters."
@@ -498,9 +499,7 @@ export default function WarehouseLocationsPage() {
                     {filteredLocations.map(
                       (location) => (
                         <tr
-                          key={
-                            location.id
-                          }
+                          key={location.id}
                           className="transition hover:bg-surface-hover"
                         >
                           <td className="px-5 py-4">
@@ -610,9 +609,7 @@ export default function WarehouseLocationsPage() {
                   <button
                     type="button"
                     onClick={closeDialog}
-                    disabled={
-                      actionLoading
-                    }
+                    disabled={actionLoading}
                     className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
                   >
                     Cancel
@@ -623,9 +620,7 @@ export default function WarehouseLocationsPage() {
                     onClick={
                       confirmStatusChange
                     }
-                    disabled={
-                      actionLoading
-                    }
+                    disabled={actionLoading}
                     className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
                   >
                     {actionLoading
@@ -644,8 +639,7 @@ export default function WarehouseLocationsPage() {
           <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-line bg-surface px-4 py-3 shadow-lg">
             <p
               className={`text-sm ${
-                toast.type ===
-                "success"
+                toast.type === "success"
                   ? "text-success"
                   : "text-danger"
               }`}

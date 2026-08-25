@@ -120,7 +120,9 @@ function WarehouseViewContent() {
   useEffect(() => {
     async function load() {
       if (!warehouseId) {
-        setError("Warehouse ID is missing.");
+        setError(
+          "Warehouse ID is missing."
+        );
         setLoading(false);
         return;
       }
@@ -165,7 +167,9 @@ function WarehouseViewContent() {
   }
 
   function openEdit() {
-    if (!warehouse) return;
+    if (!warehouse) {
+      return;
+    }
 
     setForm(toForm(warehouse));
     setSaveError(null);
@@ -173,7 +177,9 @@ function WarehouseViewContent() {
   }
 
   function closeEdit() {
-    if (saving) return;
+    if (saving) {
+      return;
+    }
 
     setShowEdit(false);
     setSaveError(null);
@@ -188,7 +194,9 @@ function WarehouseViewContent() {
   ) {
     event.preventDefault();
 
-    if (!warehouseId || !form) return;
+    if (!warehouseId || !form) {
+      return;
+    }
 
     if (!form.code.trim()) {
       setSaveError(
@@ -248,6 +256,18 @@ function WarehouseViewContent() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function openLocations() {
+    if (!warehouseId) {
+      return;
+    }
+
+    router.push(
+      `/warehouse-locations?warehouseId=${encodeURIComponent(
+        warehouseId
+      )}`
+    );
   }
 
   return (
@@ -331,13 +351,23 @@ function WarehouseViewContent() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={openEdit}
-                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                >
-                  Edit Warehouse
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={openLocations}
+                    className="rounded-lg border border-primary-600 bg-surface px-4 py-2.5 text-sm font-semibold text-primary-600 hover:bg-primary-50"
+                  >
+                    View Locations
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={openEdit}
+                    className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                  >
+                    Edit Warehouse
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-8 p-6">
@@ -407,7 +437,9 @@ function WarehouseViewContent() {
 
                     <DisplayField
                       label="Country"
-                      value={warehouse.country}
+                      value={
+                        warehouse.country
+                      }
                     />
                   </div>
                 </section>
@@ -430,6 +462,11 @@ function WarehouseViewContent() {
                       value={new Date(
                         warehouse.updatedAt
                       ).toLocaleString()}
+                    />
+
+                    <DisplayField
+                      label="Warehouse ID"
+                      value={warehouse.id}
                     />
                   </div>
                 </section>
@@ -493,7 +530,8 @@ function WarehouseViewContent() {
                     <InputField
                       label="Address Line 1"
                       value={
-                        form.addressLine1 ?? ""
+                        form.addressLine1 ??
+                        ""
                       }
                       onChange={(value) =>
                         updateField(
@@ -506,7 +544,8 @@ function WarehouseViewContent() {
                     <InputField
                       label="Address Line 2"
                       value={
-                        form.addressLine2 ?? ""
+                        form.addressLine2 ??
+                        ""
                       }
                       onChange={(value) =>
                         updateField(
@@ -518,7 +557,9 @@ function WarehouseViewContent() {
 
                     <InputField
                       label="City"
-                      value={form.city ?? ""}
+                      value={
+                        form.city ?? ""
+                      }
                       onChange={(value) =>
                         updateField(
                           "city",
@@ -529,7 +570,9 @@ function WarehouseViewContent() {
 
                     <InputField
                       label="Province / State"
-                      value={form.state ?? ""}
+                      value={
+                        form.state ?? ""
+                      }
                       onChange={(value) =>
                         updateField(
                           "state",
@@ -541,7 +584,8 @@ function WarehouseViewContent() {
                     <InputField
                       label="Postal Code"
                       value={
-                        form.postalCode ?? ""
+                        form.postalCode ??
+                        ""
                       }
                       onChange={(value) =>
                         updateField(
@@ -554,7 +598,8 @@ function WarehouseViewContent() {
                     <InputField
                       label="Country"
                       value={
-                        form.country ?? ""
+                        form.country ??
+                        ""
                       }
                       onChange={(value) =>
                         updateField(
@@ -567,11 +612,16 @@ function WarehouseViewContent() {
                     <label className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={form.active}
-                        onChange={(event) =>
+                        checked={
+                          form.active
+                        }
+                        onChange={(
+                          event
+                        ) =>
                           updateField(
                             "active",
-                            event.target.checked
+                            event.target
+                              .checked
                           )
                         }
                         className="h-4 w-4"
@@ -594,7 +644,7 @@ function WarehouseViewContent() {
                       type="button"
                       onClick={closeEdit}
                       disabled={saving}
-                      className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
+                      className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
                     >
                       Cancel
                     </button>
