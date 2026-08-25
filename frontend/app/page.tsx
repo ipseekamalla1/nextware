@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -24,12 +27,21 @@ import {
   getProducts,
   getSuppliers,
 } from "@/lib/api";
-
-const COMPANY_ID = "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 function InboxIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M22 12h-6l-2 3h-4l-2-3H2" />
       <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" />
     </svg>
@@ -38,7 +50,17 @@ function InboxIcon() {
 
 function AlertIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v4" />
       <path d="M12 16h.01" />
@@ -53,7 +75,9 @@ function StatCardSkeleton() {
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-10 w-10 rounded-lg" />
       </div>
+
       <Skeleton className="mt-4 h-7 w-16" />
+
       <Skeleton className="mt-3 h-3 w-28" />
     </Card>
   );
@@ -69,28 +93,78 @@ interface DashboardData {
 export default function Home() {
   const router = useRouter();
 
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    session,
+    loading: authLoading,
+  } = useAuth();
+
+  const [
+    data,
+    setData,
+  ] = useState<DashboardData | null>(
+    null
+  );
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(null);
+
+  const companyId =
+    session?.companyId ?? null;
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (
+      authLoading ||
+      !companyId
+    ) {
+      return;
+    }
 
-  async function loadDashboard() {
+    loadDashboard(companyId);
+  }, [
+    authLoading,
+    companyId,
+  ]);
+
+  async function loadDashboard(
+    authenticatedCompanyId: string
+  ) {
     try {
       setLoading(true);
       setError(null);
 
-      const [products, categories, customers, suppliers] =
-        await Promise.all([
-          getProducts(COMPANY_ID),
-          getCategories(COMPANY_ID),
-          getCustomers(COMPANY_ID),
-          getSuppliers(COMPANY_ID),
-        ]);
+      const [
+        products,
+        categories,
+        customers,
+        suppliers,
+      ] = await Promise.all([
+        getProducts(
+          authenticatedCompanyId
+        ),
+        getCategories(
+          authenticatedCompanyId
+        ),
+        getCustomers(
+          authenticatedCompanyId
+        ),
+        getSuppliers(
+          authenticatedCompanyId
+        ),
+      ]);
 
-      setData({ products, categories, customers, suppliers });
+      setData({
+        products,
+        categories,
+        customers,
+        suppliers,
+      });
     } catch (err) {
       setError(
         err instanceof Error
@@ -104,63 +178,110 @@ export default function Home() {
 
   const today = new Date();
 
-  const dateLabel = today.toLocaleDateString(undefined, {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const dateLabel =
+    today.toLocaleDateString(
+      undefined,
+      {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }
+    );
 
-  const hour = today.getHours();
+  const hour =
+    today.getHours();
+
   const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    hour < 12
+      ? "Good morning"
+      : hour < 18
+        ? "Good afternoon"
+        : "Good evening";
 
-  const activeProducts = data?.products.filter((p) => p.active).length ?? 0;
-  const activeCustomers = data?.customers.filter((c) => c.active).length ?? 0;
-  const activeSuppliers = data?.suppliers.filter((s) => s.active).length ?? 0;
-  const totalProducts = data?.products.length ?? 0;
-  const totalCustomers = data?.customers.length ?? 0;
-  const totalSuppliers = data?.suppliers.length ?? 0;
+  const activeProducts =
+    data?.products.filter(
+      (product) =>
+        product.active
+    ).length ?? 0;
+
+  const activeCustomers =
+    data?.customers.filter(
+      (customer) =>
+        customer.active
+    ).length ?? 0;
+
+  const activeSuppliers =
+    data?.suppliers.filter(
+      (supplier) =>
+        supplier.active
+    ).length ?? 0;
+
+  const totalProducts =
+    data?.products.length ?? 0;
+
+  const totalCustomers =
+    data?.customers.length ?? 0;
+
+  const totalSuppliers =
+    data?.suppliers.length ?? 0;
 
   const quickActions = [
     {
       label: "Add Product",
-      description: "Create a new product in the catalog",
+      description:
+        "Create a new product in the catalog",
       href: "/products",
       icon: BoxIcon,
     },
     {
       label: "Add Category",
-      description: "Organize the product master data",
+      description:
+        "Organize the product master data",
       href: "/categories",
       icon: TagIcon,
     },
     {
       label: "Add Customer",
-      description: "Register a new customer account",
+      description:
+        "Register a new customer account",
       href: "/customers",
       icon: UsersIcon,
     },
     {
       label: "Add Supplier",
-      description: "Onboard a new supplier",
+      description:
+        "Onboard a new supplier",
       href: "/suppliers",
       icon: TruckIcon,
     },
   ];
 
+  if (
+    authLoading ||
+    !session
+  ) {
+    return null;
+  }
+
   return (
     <AppShell>
       <div className="p-6 lg:p-8">
         <div className="mb-8">
-          <p className="mb-1 text-sm font-medium text-ink-muted">{dateLabel}</p>
+          <p className="mb-1 text-sm font-medium text-ink-muted">
+            {dateLabel}
+          </p>
 
           <h1 className="text-2xl font-bold tracking-tight text-ink">
             {greeting}
+            {session.firstName
+              ? `, ${session.firstName}`
+              : ""}
           </h1>
 
           <p className="mt-1 text-sm text-ink-secondary">
-            Here is what is happening across your business today.
+            Here is what is happening across
+            your business today.
           </p>
         </div>
 
@@ -176,12 +297,19 @@ export default function Home() {
                   Unable to load dashboard data
                 </p>
 
-                <p className="mt-1 text-sm text-danger">{error}</p>
+                <p className="mt-1 text-sm text-danger">
+                  {error}
+                </p>
               </div>
 
               <button
                 type="button"
-                onClick={loadDashboard}
+                onClick={() =>
+                  companyId &&
+                  loadDashboard(
+                    companyId
+                  )
+                }
                 className="rounded-lg bg-danger px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
               >
                 Try Again
@@ -210,7 +338,9 @@ export default function Home() {
 
               <StatCard
                 label="Categories"
-                value={data?.categories.length ?? 0}
+                value={
+                  data?.categories.length ?? 0
+                }
                 helpText="Product master data"
                 tone="info"
                 icon={<LayersIcon />}
@@ -236,9 +366,15 @@ export default function Home() {
         </section>
 
         <section className="mt-6 grid gap-6 xl:grid-cols-3">
-          <Card padded={false} className="xl:col-span-2">
+          <Card
+            padded={false}
+            className="xl:col-span-2"
+          >
             <div className="border-b border-line px-5 py-4">
-              <h2 className="text-sm font-bold text-ink">Recent Activity</h2>
+              <h2 className="text-sm font-bold text-ink">
+                Recent Activity
+              </h2>
+
               <p className="mt-0.5 text-xs text-ink-muted">
                 Latest changes across your business
               </p>
@@ -255,36 +391,49 @@ export default function Home() {
 
           <Card padded={false}>
             <div className="border-b border-line px-5 py-4">
-              <h2 className="text-sm font-bold text-ink">Quick Actions</h2>
+              <h2 className="text-sm font-bold text-ink">
+                Quick Actions
+              </h2>
+
               <p className="mt-0.5 text-xs text-ink-muted">
                 Common operational tasks
               </p>
             </div>
 
             <div className="space-y-2 p-4">
-              {quickActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => router.push(action.href)}
-                    className="flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition hover:border-line-strong hover:bg-surface-hover"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-600/10 text-primary-600">
-                      <Icon />
-                    </span>
-                    <span>
-                      <div className="text-sm font-semibold text-ink">
-                        {action.label}
-                      </div>
-                      <div className="mt-0.5 text-xs text-ink-muted">
-                        {action.description}
-                      </div>
-                    </span>
-                  </button>
-                );
-              })}
+              {quickActions.map(
+                (action) => {
+                  const Icon =
+                    action.icon;
+
+                  return (
+                    <button
+                      key={action.label}
+                      type="button"
+                      onClick={() =>
+                        router.push(
+                          action.href
+                        )
+                      }
+                      className="flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition hover:border-line-strong hover:bg-surface-hover"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-600/10 text-primary-600">
+                        <Icon />
+                      </span>
+
+                      <span>
+                        <div className="text-sm font-semibold text-ink">
+                          {action.label}
+                        </div>
+
+                        <div className="mt-0.5 text-xs text-ink-muted">
+                          {action.description}
+                        </div>
+                      </span>
+                    </button>
+                  );
+                }
+              )}
             </div>
           </Card>
         </section>
