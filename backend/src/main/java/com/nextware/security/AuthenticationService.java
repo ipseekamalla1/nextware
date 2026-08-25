@@ -6,6 +6,7 @@ import com.nextware.repository.UserRepository;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +28,7 @@ public class AuthenticationService {
         this.jwtService = jwtService;
     }
 
+    @Transactional(readOnly = true)
     public AuthenticationResult authenticate(
             UUID companyId,
             String username,
@@ -50,12 +52,10 @@ public class AuthenticationService {
             );
         }
 
-        if (
-                !passwordEncoder.matches(
-                        password,
-                        user.getPasswordHash()
-                )
-        ) {
+        if (!passwordEncoder.matches(
+                password,
+                user.getPasswordHash()
+        )) {
             throw new BadCredentialsException(
                     "Invalid username or password"
             );
