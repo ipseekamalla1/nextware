@@ -5,6 +5,7 @@ import com.nextware.dto.product.ProductResponse;
 import com.nextware.entity.Product;
 import com.nextware.mapper.ProductMapper;
 import com.nextware.repository.ProductRepository;
+import com.nextware.security.CompanySecurityService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,21 +18,29 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
+    private final CompanySecurityService companySecurityService;
 
     public ProductService(
             ProductRepository productRepository,
-            ProductMapper productMapper
+            ProductMapper productMapper,
+            CompanySecurityService companySecurityService
     ) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     /**
-     * Get all products belonging to a company.
+     * Get all products belonging to the authenticated company.
      */
     public List<ProductResponse> getProducts(
             UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return productRepository
                 .findAllByCompanyIdOrderByNameAsc(
                         companyId
@@ -42,12 +51,16 @@ public class ProductService {
     }
 
     /**
-     * Get one product belonging to a company.
+     * Get one product belonging to the authenticated company.
      */
     public ProductResponse getProduct(
             UUID companyId,
             UUID productId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Product product =
                 productRepository
                         .findByIdAndCompanyId(
@@ -62,7 +75,9 @@ public class ProductService {
                                         )
                         );
 
-        return productMapper.toResponse(product);
+        return productMapper.toResponse(
+                product
+        );
     }
 
     /**
@@ -71,13 +86,20 @@ public class ProductService {
     public ProductResponse createProduct(
             ProductCreateRequest request
     ) {
+        UUID companyId =
+                request.getCompanyId();
+
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         String sku =
                 request.getSku().trim();
 
         if (
                 productRepository
                         .existsByCompanyIdAndSku(
-                                request.getCompanyId(),
+                                companyId,
                                 sku
                         )
         ) {
@@ -88,10 +110,14 @@ public class ProductService {
         }
 
         Product product =
-                productMapper.toEntity(request);
+                productMapper.toEntity(
+                        request
+                );
 
         Product savedProduct =
-                productRepository.save(product);
+                productRepository.save(
+                        product
+                );
 
         return productMapper.toResponse(
                 savedProduct
@@ -106,6 +132,9 @@ public class ProductService {
             UUID productId,
             ProductCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         if (
                 !companyId.equals(
@@ -155,7 +184,9 @@ public class ProductService {
         );
 
         Product updatedProduct =
-                productRepository.save(product);
+                productRepository.save(
+                        product
+                );
 
         return productMapper.toResponse(
                 updatedProduct
@@ -169,6 +200,10 @@ public class ProductService {
             UUID companyId,
             UUID productId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Product product =
                 productRepository
                         .findByIdAndCompanyId(
@@ -189,6 +224,8 @@ public class ProductService {
 
         product.setActive(false);
 
-        productRepository.save(product);
+        productRepository.save(
+                product
+        );
     }
 }

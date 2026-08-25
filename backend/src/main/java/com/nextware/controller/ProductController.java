@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.product.ProductCreateRequest;
 import com.nextware.dto.product.ProductResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.product.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,17 +25,29 @@ import java.util.UUID;
 public class ProductController {
 
     private final ProductService productService;
+    private final CompanySecurityService companySecurityService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(
+            ProductService productService,
+            CompanySecurityService companySecurityService
+    ) {
         this.productService = productService;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getProducts(
             @RequestParam UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
-                productService.getProducts(companyId)
+                productService.getProducts(
+                        companyId
+                )
         );
     }
 
@@ -43,6 +56,10 @@ public class ProductController {
             @RequestParam UUID companyId,
             @PathVariable UUID productId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 productService.getProduct(
                         companyId,
@@ -55,6 +72,10 @@ public class ProductController {
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
@@ -70,6 +91,14 @@ public class ProductController {
             @PathVariable UUID productId,
             @Valid @RequestBody ProductCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity.ok(
                 productService.updateProduct(
                         companyId,
@@ -87,6 +116,10 @@ public class ProductController {
             @RequestParam UUID companyId,
             @PathVariable UUID productId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         productService.deactivateProduct(
                 companyId,
                 productId

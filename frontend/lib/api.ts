@@ -1,7 +1,5 @@
 import { authFetch } from "@/lib/authFetch";
 
-const API_BASE_URL = "http://localhost:8080";
-
 const fetch = authFetch;
 
 /* =========================================================
@@ -89,8 +87,6 @@ export interface Customer {
   updatedAt: string;
 }
 
-
-
 export interface CustomerCreateRequest {
   companyId: string;
   customerCode: string;
@@ -114,7 +110,6 @@ export interface CustomerCreateRequest {
 
   active: boolean;
 }
-
 
 /* =========================================================
    SUPPLIER
@@ -156,6 +151,7 @@ export interface SupplierCreateRequest {
 
   active: boolean;
 }
+
 /* =========================================================
    UNIT OF MEASURE
 ========================================================= */
@@ -201,7 +197,7 @@ async function getErrorMessage(
 ========================================================= */
 
 export async function checkBackendHealth(): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/api/health`, {
+  const response = await fetch("/api/health", {
     cache: "no-store",
   });
 
@@ -225,9 +221,7 @@ export async function getUnitsOfMeasure(
   companyId: string
 ): Promise<UnitOfMeasure[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/unit-of-measures?companyId=${encodeURIComponent(
-      companyId
-    )}`,
+    `/api/unit-of-measures?companyId=${encodeURIComponent(companyId)}`,
     {
       method: "GET",
       cache: "no-store",
@@ -254,9 +248,7 @@ export async function getProducts(
   companyId: string
 ): Promise<Product[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/products?companyId=${encodeURIComponent(
-      companyId
-    )}`,
+    `/api/products?companyId=${encodeURIComponent(companyId)}`,
     {
       method: "GET",
       cache: "no-store",
@@ -280,7 +272,7 @@ export async function getProduct(
   productId: string
 ): Promise<Product> {
   const response = await fetch(
-    `${API_BASE_URL}/api/products/${encodeURIComponent(
+    `/api/products/${encodeURIComponent(
       productId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -304,7 +296,7 @@ export async function getProduct(
 export async function createProduct(
   request: ProductCreateRequest
 ): Promise<Product> {
-  const response = await fetch(`${API_BASE_URL}/api/products`, {
+  const response = await fetch("/api/products", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -330,7 +322,7 @@ export async function updateProduct(
   request: ProductCreateRequest
 ): Promise<Product> {
   const response = await fetch(
-    `${API_BASE_URL}/api/products/${encodeURIComponent(
+    `/api/products/${encodeURIComponent(
       productId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -359,7 +351,7 @@ export async function deactivateProduct(
   productId: string
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/products/${encodeURIComponent(
+    `/api/products/${encodeURIComponent(
       productId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -405,9 +397,7 @@ export async function getCategories(
   companyId: string
 ): Promise<Category[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/categories?companyId=${encodeURIComponent(
-      companyId
-    )}`,
+    `/api/categories?companyId=${encodeURIComponent(companyId)}`,
     {
       method: "GET",
       cache: "no-store",
@@ -431,7 +421,7 @@ export async function getCategory(
   categoryId: string
 ): Promise<Category> {
   const response = await fetch(
-    `${API_BASE_URL}/api/categories/${encodeURIComponent(
+    `/api/categories/${encodeURIComponent(
       categoryId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -455,7 +445,7 @@ export async function getCategory(
 export async function createCategory(
   request: CategoryCreateRequest
 ): Promise<Category> {
-  const response = await fetch(`${API_BASE_URL}/api/categories`, {
+  const response = await fetch("/api/categories", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -481,7 +471,7 @@ export async function updateCategory(
   request: CategoryCreateRequest
 ): Promise<Category> {
   const response = await fetch(
-    `${API_BASE_URL}/api/categories/${encodeURIComponent(
+    `/api/categories/${encodeURIComponent(
       categoryId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -510,7 +500,7 @@ export async function deactivateCategory(
   categoryId: string
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/categories/${encodeURIComponent(
+    `/api/categories/${encodeURIComponent(
       categoryId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -539,11 +529,7 @@ export async function activateCategory(
     active: true,
   };
 
-  return updateCategory(
-    companyId,
-    category.id,
-    request
-  );
+  return updateCategory(companyId, category.id, request);
 }
 
 /* =========================================================
@@ -554,9 +540,7 @@ export async function getCustomers(
   companyId: string
 ): Promise<Customer[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/customers?companyId=${encodeURIComponent(
-      companyId
-    )}`,
+    `/api/customers?companyId=${encodeURIComponent(companyId)}`,
     {
       method: "GET",
       cache: "no-store",
@@ -580,7 +564,7 @@ export async function getCustomer(
   customerId: string
 ): Promise<Customer> {
   const response = await fetch(
-    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+    `/api/customers/${encodeURIComponent(
       customerId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -604,16 +588,13 @@ export async function getCustomer(
 export async function createCustomer(
   request: CustomerCreateRequest
 ): Promise<Customer> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/customers`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
+  const response = await fetch("/api/customers", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -633,7 +614,7 @@ export async function updateCustomer(
   request: CustomerCreateRequest
 ): Promise<Customer> {
   const response = await fetch(
-    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+    `/api/customers/${encodeURIComponent(
       customerId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -662,7 +643,7 @@ export async function deactivateCustomer(
   customerId: string
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+    `/api/customers/${encodeURIComponent(
       customerId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -685,7 +666,7 @@ export async function activateCustomer(
   customer: Customer
 ): Promise<Customer> {
   const response = await fetch(
-    `${API_BASE_URL}/api/customers/${encodeURIComponent(
+    `/api/customers/${encodeURIComponent(
       customer.id
     )}/activate?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -713,9 +694,7 @@ export async function getSuppliers(
   companyId: string
 ): Promise<Supplier[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/suppliers?companyId=${encodeURIComponent(
-      companyId
-    )}`,
+    `/api/suppliers?companyId=${encodeURIComponent(companyId)}`,
     {
       method: "GET",
       cache: "no-store",
@@ -739,7 +718,7 @@ export async function getSupplier(
   supplierId: string
 ): Promise<Supplier> {
   const response = await fetch(
-    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+    `/api/suppliers/${encodeURIComponent(
       supplierId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -763,16 +742,13 @@ export async function getSupplier(
 export async function createSupplier(
   request: SupplierCreateRequest
 ): Promise<Supplier> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/suppliers`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
+  const response = await fetch("/api/suppliers", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -792,7 +768,7 @@ export async function updateSupplier(
   request: SupplierCreateRequest
 ): Promise<Supplier> {
   const response = await fetch(
-    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+    `/api/suppliers/${encodeURIComponent(
       supplierId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -821,7 +797,7 @@ export async function deactivateSupplier(
   supplierId: string
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+    `/api/suppliers/${encodeURIComponent(
       supplierId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -844,7 +820,7 @@ export async function activateSupplier(
   supplierId: string
 ): Promise<Supplier> {
   const response = await fetch(
-    `${API_BASE_URL}/api/suppliers/${encodeURIComponent(
+    `/api/suppliers/${encodeURIComponent(
       supplierId
     )}/activate?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -905,9 +881,7 @@ export async function getWarehouses(
   companyId: string
 ): Promise<Warehouse[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouses?companyId=${encodeURIComponent(
-      companyId
-    )}`,
+    `/api/warehouses?companyId=${encodeURIComponent(companyId)}`,
     {
       method: "GET",
       cache: "no-store",
@@ -931,7 +905,7 @@ export async function getWarehouse(
   warehouseId: string
 ): Promise<Warehouse> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+    `/api/warehouses/${encodeURIComponent(
       warehouseId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -955,16 +929,13 @@ export async function getWarehouse(
 export async function createWarehouse(
   request: WarehouseCreateRequest
 ): Promise<Warehouse> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/warehouses`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
+  const response = await fetch("/api/warehouses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -984,7 +955,7 @@ export async function updateWarehouse(
   request: WarehouseCreateRequest
 ): Promise<Warehouse> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+    `/api/warehouses/${encodeURIComponent(
       warehouseId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -1013,7 +984,7 @@ export async function deactivateWarehouse(
   warehouseId: string
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+    `/api/warehouses/${encodeURIComponent(
       warehouseId
     )}?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -1036,7 +1007,7 @@ export async function activateWarehouse(
   warehouseId: string
 ): Promise<Warehouse> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+    `/api/warehouses/${encodeURIComponent(
       warehouseId
     )}/activate?companyId=${encodeURIComponent(companyId)}`,
     {
@@ -1055,6 +1026,7 @@ export async function activateWarehouse(
 
   return response.json();
 }
+
 /* =========================================================
    WAREHOUSE LOCATION
 ========================================================= */
@@ -1082,7 +1054,7 @@ export async function getWarehouseLocations(
   warehouseId: string
 ): Promise<WarehouseLocation[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouse-locations?warehouseId=${encodeURIComponent(
+    `/api/warehouse-locations?warehouseId=${encodeURIComponent(
       warehouseId
     )}`,
     {
@@ -1108,7 +1080,7 @@ export async function getWarehouseLocation(
   locationId: string
 ): Promise<WarehouseLocation> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+    `/api/warehouse-locations/${encodeURIComponent(
       locationId
     )}?warehouseId=${encodeURIComponent(warehouseId)}`,
     {
@@ -1132,16 +1104,13 @@ export async function getWarehouseLocation(
 export async function createWarehouseLocation(
   request: WarehouseLocationCreateRequest
 ): Promise<WarehouseLocation> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/warehouse-locations`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
+  const response = await fetch("/api/warehouse-locations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -1161,7 +1130,7 @@ export async function updateWarehouseLocation(
   request: WarehouseLocationCreateRequest
 ): Promise<WarehouseLocation> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+    `/api/warehouse-locations/${encodeURIComponent(
       locationId
     )}?warehouseId=${encodeURIComponent(warehouseId)}`,
     {
@@ -1190,7 +1159,7 @@ export async function deactivateWarehouseLocation(
   locationId: string
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+    `/api/warehouse-locations/${encodeURIComponent(
       locationId
     )}?warehouseId=${encodeURIComponent(warehouseId)}`,
     {
@@ -1213,7 +1182,7 @@ export async function activateWarehouseLocation(
   locationId: string
 ): Promise<WarehouseLocation> {
   const response = await fetch(
-    `${API_BASE_URL}/api/warehouse-locations/${encodeURIComponent(
+    `/api/warehouse-locations/${encodeURIComponent(
       locationId
     )}/activate?warehouseId=${encodeURIComponent(warehouseId)}`,
     {
