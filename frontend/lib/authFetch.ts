@@ -19,8 +19,10 @@ export async function authFetch(
     options.headers
   );
 
-  if (!headers.has("Content-Type") &&
-      options.body) {
+  if (
+    options.body &&
+    !headers.has("Content-Type")
+  ) {
     headers.set(
       "Content-Type",
       "application/json"

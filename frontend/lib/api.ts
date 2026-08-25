@@ -1,4 +1,8 @@
+import { authFetch } from "@/lib/authFetch";
+
 const API_BASE_URL = "http://localhost:8080";
+
+const fetch = authFetch;
 
 /* =========================================================
    PRODUCT
