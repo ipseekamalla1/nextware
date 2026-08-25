@@ -2,12 +2,18 @@ package com.nextware.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -44,6 +50,14 @@ public class User {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_role",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {
@@ -143,5 +157,13 @@ public class User {
 
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
     }
 }

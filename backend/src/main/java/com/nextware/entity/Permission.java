@@ -18,7 +18,7 @@ public class Permission {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "code", nullable = false, length = 150)
+    @Column(name = "code", nullable = false, unique = true, length = 150)
     private String code;
 
     @Column(name = "description", length = 255)
