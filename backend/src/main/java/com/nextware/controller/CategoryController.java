@@ -7,6 +7,7 @@ import com.nextware.service.category.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +37,7 @@ public class CategoryController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CATEGORY_VIEW')")
     public ResponseEntity<List<CategoryResponse>> getCategories(
             @RequestParam UUID companyId
     ) {
@@ -47,6 +49,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{categoryId}")
+    @PreAuthorize("hasAuthority('CATEGORY_VIEW')")
     public ResponseEntity<CategoryResponse> getCategory(
             @RequestParam UUID companyId,
             @PathVariable UUID categoryId
@@ -62,6 +65,7 @@ public class CategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('CATEGORY_CREATE')")
     public ResponseEntity<CategoryResponse> createCategory(
             @Valid
             @RequestBody
@@ -79,6 +83,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{categoryId}")
+    @PreAuthorize("hasAuthority('CATEGORY_UPDATE')")
     public ResponseEntity<CategoryResponse> updateCategory(
             @RequestParam UUID companyId,
             @PathVariable UUID categoryId,
@@ -105,6 +110,7 @@ public class CategoryController {
      * Soft delete / deactivate category.
      */
     @DeleteMapping("/{categoryId}")
+    @PreAuthorize("hasAuthority('CATEGORY_DELETE')")
     public ResponseEntity<Void> deactivateCategory(
             @RequestParam UUID companyId,
             @PathVariable UUID categoryId

@@ -7,6 +7,7 @@ import com.nextware.service.supplier.SupplierService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class SupplierController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('SUPPLIER_VIEW')")
     public ResponseEntity<List<SupplierResponse>>
     getSuppliers(
             @RequestParam UUID companyId
@@ -53,6 +55,7 @@ public class SupplierController {
     }
 
     @GetMapping("/{supplierId}")
+    @PreAuthorize("hasAuthority('SUPPLIER_VIEW')")
     public ResponseEntity<SupplierResponse>
     getSupplier(
             @RequestParam UUID companyId,
@@ -71,6 +74,7 @@ public class SupplierController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('SUPPLIER_CREATE')")
     public ResponseEntity<SupplierResponse>
     createSupplier(
             @Valid
@@ -91,6 +95,7 @@ public class SupplierController {
     }
 
     @PutMapping("/{supplierId}")
+    @PreAuthorize("hasAuthority('SUPPLIER_UPDATE')")
     public ResponseEntity<SupplierResponse>
     updateSupplier(
             @RequestParam UUID companyId,
@@ -120,6 +125,7 @@ public class SupplierController {
      * Soft delete / deactivate supplier.
      */
     @DeleteMapping("/{supplierId}")
+    @PreAuthorize("hasAuthority('SUPPLIER_DELETE')")
     public ResponseEntity<Void>
     deactivateSupplier(
             @RequestParam UUID companyId,
@@ -143,6 +149,7 @@ public class SupplierController {
      * Activate supplier.
      */
     @PutMapping("/{supplierId}/activate")
+    @PreAuthorize("hasAuthority('SUPPLIER_UPDATE')")
     public ResponseEntity<SupplierResponse>
     activateSupplier(
             @RequestParam UUID companyId,

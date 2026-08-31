@@ -7,6 +7,7 @@ import com.nextware.service.warehouse.WarehouseService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class WarehouseController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('WAREHOUSE_VIEW')")
     public ResponseEntity<List<WarehouseResponse>>
     getWarehouses(
             @RequestParam UUID companyId
@@ -53,6 +55,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/{warehouseId}")
+    @PreAuthorize("hasAuthority('WAREHOUSE_VIEW')")
     public ResponseEntity<WarehouseResponse>
     getWarehouse(
             @RequestParam UUID companyId,
@@ -71,6 +74,7 @@ public class WarehouseController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('WAREHOUSE_CREATE')")
     public ResponseEntity<WarehouseResponse>
     createWarehouse(
             @Valid
@@ -91,6 +95,7 @@ public class WarehouseController {
     }
 
     @PutMapping("/{warehouseId}")
+    @PreAuthorize("hasAuthority('WAREHOUSE_UPDATE')")
     public ResponseEntity<WarehouseResponse>
     updateWarehouse(
             @RequestParam UUID companyId,
@@ -117,6 +122,7 @@ public class WarehouseController {
     }
 
     @DeleteMapping("/{warehouseId}")
+    @PreAuthorize("hasAuthority('WAREHOUSE_DELETE')")
     public ResponseEntity<Void>
     deactivateWarehouse(
             @RequestParam UUID companyId,
@@ -137,6 +143,7 @@ public class WarehouseController {
     }
 
     @PutMapping("/{warehouseId}/activate")
+    @PreAuthorize("hasAuthority('WAREHOUSE_UPDATE')")
     public ResponseEntity<WarehouseResponse>
     activateWarehouse(
             @RequestParam UUID companyId,

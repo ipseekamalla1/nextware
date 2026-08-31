@@ -7,6 +7,7 @@ import com.nextware.service.warehouseLocation.WarehouseLocationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,6 +40,7 @@ public class WarehouseLocationController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('WAREHOUSE_VIEW')")
     public ResponseEntity<List<WarehouseLocationResponse>>
     getWarehouseLocations(
             @RequestParam UUID warehouseId
@@ -52,6 +54,7 @@ public class WarehouseLocationController {
     }
 
     @GetMapping("/{locationId}")
+    @PreAuthorize("hasAuthority('WAREHOUSE_VIEW')")
     public ResponseEntity<WarehouseLocationResponse>
     getWarehouseLocation(
             @RequestParam UUID warehouseId,
@@ -67,6 +70,7 @@ public class WarehouseLocationController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('WAREHOUSE_CREATE')")
     public ResponseEntity<WarehouseLocationResponse>
     createWarehouseLocation(
             @Valid
@@ -84,6 +88,7 @@ public class WarehouseLocationController {
     }
 
     @PutMapping("/{locationId}")
+    @PreAuthorize("hasAuthority('WAREHOUSE_UPDATE')")
     public ResponseEntity<WarehouseLocationResponse>
     updateWarehouseLocation(
             @RequestParam UUID warehouseId,
@@ -106,6 +111,7 @@ public class WarehouseLocationController {
      * Soft delete / deactivate warehouse location.
      */
     @DeleteMapping("/{locationId}")
+    @PreAuthorize("hasAuthority('WAREHOUSE_DELETE')")
     public ResponseEntity<Void>
     deactivateWarehouseLocation(
             @RequestParam UUID warehouseId,
@@ -126,6 +132,7 @@ public class WarehouseLocationController {
      * Activate warehouse location.
      */
     @PutMapping("/{locationId}/activate")
+    @PreAuthorize("hasAuthority('WAREHOUSE_UPDATE')")
     public ResponseEntity<WarehouseLocationResponse>
     activateWarehouseLocation(
             @RequestParam UUID warehouseId,

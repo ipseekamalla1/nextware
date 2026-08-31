@@ -7,6 +7,7 @@ import com.nextware.service.unit.UnitOfMeasureService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class UnitOfMeasureController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
     public ResponseEntity<List<UnitOfMeasureResponse>> getUnits(
             @RequestParam UUID companyId
     ) {
@@ -52,6 +54,7 @@ public class UnitOfMeasureController {
     }
 
     @GetMapping("/{unitId}")
+    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
     public ResponseEntity<UnitOfMeasureResponse> getUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId
@@ -69,6 +72,7 @@ public class UnitOfMeasureController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PRODUCT_CREATE')")
     public ResponseEntity<UnitOfMeasureResponse> createUnit(
             @Valid
             @RequestBody
@@ -88,6 +92,7 @@ public class UnitOfMeasureController {
     }
 
     @PutMapping("/{unitId}")
+    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
     public ResponseEntity<UnitOfMeasureResponse> updateUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId,
@@ -113,6 +118,7 @@ public class UnitOfMeasureController {
     }
 
     @DeleteMapping("/{unitId}")
+    @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
     public ResponseEntity<Void> deactivateUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId

@@ -7,6 +7,7 @@ import com.nextware.service.customer.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class CustomerController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     public ResponseEntity<List<CustomerResponse>> getCustomers(
             @RequestParam UUID companyId
     ) {
@@ -52,6 +54,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     public ResponseEntity<CustomerResponse> getCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId
@@ -69,6 +72,7 @@ public class CustomerController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('CUSTOMER_CREATE')")
     public ResponseEntity<CustomerResponse> createCustomer(
             @Valid
             @RequestBody
@@ -88,6 +92,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('CUSTOMER_UPDATE')")
     public ResponseEntity<CustomerResponse> updateCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId,
@@ -116,6 +121,7 @@ public class CustomerController {
      * Soft delete / deactivate customer.
      */
     @DeleteMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('CUSTOMER_DELETE')")
     public ResponseEntity<Void> deactivateCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId
@@ -138,6 +144,7 @@ public class CustomerController {
      * Activate customer.
      */
     @PutMapping("/{customerId}/activate")
+    @PreAuthorize("hasAuthority('CUSTOMER_UPDATE')")
     public ResponseEntity<CustomerResponse> activateCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId
