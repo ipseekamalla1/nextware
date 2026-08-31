@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.customer.CustomerCreateRequest;
 import com.nextware.dto.customer.CustomerResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.customer.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,19 +25,25 @@ import java.util.UUID;
 public class CustomerController {
 
     private final CustomerService customerService;
+    private final CompanySecurityService companySecurityService;
 
     public CustomerController(
-            CustomerService customerService
+            CustomerService customerService,
+            CompanySecurityService companySecurityService
     ) {
-        this.customerService =
-                customerService;
+        this.customerService = customerService;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping
-    public ResponseEntity<List<CustomerResponse>>
-    getCustomers(
+    public ResponseEntity<List<CustomerResponse>> getCustomers(
             @RequestParam UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 customerService.getCustomers(
                         companyId
@@ -45,11 +52,14 @@ public class CustomerController {
     }
 
     @GetMapping("/{customerId}")
-    public ResponseEntity<CustomerResponse>
-    getCustomer(
+    public ResponseEntity<CustomerResponse> getCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 customerService.getCustomer(
                         companyId,
@@ -59,12 +69,15 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<CustomerResponse>
-    createCustomer(
+    public ResponseEntity<CustomerResponse> createCustomer(
             @Valid
             @RequestBody
             CustomerCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
@@ -75,14 +88,21 @@ public class CustomerController {
     }
 
     @PutMapping("/{customerId}")
-    public ResponseEntity<CustomerResponse>
-    updateCustomer(
+    public ResponseEntity<CustomerResponse> updateCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId,
             @Valid
             @RequestBody
             CustomerCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity.ok(
                 customerService.updateCustomer(
                         companyId,
@@ -96,11 +116,14 @@ public class CustomerController {
      * Soft delete / deactivate customer.
      */
     @DeleteMapping("/{customerId}")
-    public ResponseEntity<Void>
-    deactivateCustomer(
+    public ResponseEntity<Void> deactivateCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         customerService.deactivateCustomer(
                 companyId,
                 customerId
@@ -115,11 +138,14 @@ public class CustomerController {
      * Activate customer.
      */
     @PutMapping("/{customerId}/activate")
-    public ResponseEntity<CustomerResponse>
-    activateCustomer(
+    public ResponseEntity<CustomerResponse> activateCustomer(
             @RequestParam UUID companyId,
             @PathVariable UUID customerId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 customerService.activateCustomer(
                         companyId,

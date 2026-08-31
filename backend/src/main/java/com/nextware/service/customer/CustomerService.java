@@ -5,6 +5,7 @@ import com.nextware.dto.customer.CustomerResponse;
 import com.nextware.entity.Customer;
 import com.nextware.mapper.CustomerMapper;
 import com.nextware.repository.CustomerRepository;
+import com.nextware.security.CompanySecurityService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,26 +17,35 @@ import java.util.UUID;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-
     private final CustomerMapper customerMapper;
+    private final CompanySecurityService companySecurityService;
 
     public CustomerService(
             CustomerRepository customerRepository,
-            CustomerMapper customerMapper
+            CustomerMapper customerMapper,
+            CompanySecurityService companySecurityService
     ) {
         this.customerRepository =
                 customerRepository;
 
         this.customerMapper =
                 customerMapper;
+
+        this.companySecurityService =
+                companySecurityService;
     }
 
     /**
-     * Get all customers belonging to a company.
+     * Get all customers belonging to
+     * the authenticated company.
      */
     public List<CustomerResponse> getCustomers(
             UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return customerRepository
                 .findAllByCompanyIdOrderByNameAsc(
                         companyId
@@ -46,12 +56,17 @@ public class CustomerService {
     }
 
     /**
-     * Get one customer belonging to a company.
+     * Get one customer belonging to
+     * the authenticated company.
      */
     public CustomerResponse getCustomer(
             UUID companyId,
             UUID customerId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Customer customer =
                 customerRepository
                         .findByIdAndCompanyId(
@@ -72,18 +87,27 @@ public class CustomerService {
     }
 
     /**
-     * Create a customer.
+     * Create a customer for the
+     * authenticated company.
      */
     public CustomerResponse createCustomer(
             CustomerCreateRequest request
     ) {
+        UUID companyId =
+                request.getCompanyId();
+
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         String customerCode =
-                request.getCustomerCode().trim();
+                request.getCustomerCode()
+                        .trim();
 
         if (
                 customerRepository
                         .existsByCompanyIdAndCustomerCode(
-                                request.getCompanyId(),
+                                companyId,
                                 customerCode
                         )
         ) {
@@ -109,13 +133,17 @@ public class CustomerService {
     }
 
     /**
-     * Update a customer.
+     * Update a customer belonging to
+     * the authenticated company.
      */
     public CustomerResponse updateCustomer(
             UUID companyId,
             UUID customerId,
             CustomerCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         if (
                 !companyId.equals(
@@ -143,7 +171,8 @@ public class CustomerService {
                         );
 
         String customerCode =
-                request.getCustomerCode().trim();
+                request.getCustomerCode()
+                        .trim();
 
         if (
                 customerRepository
@@ -181,6 +210,10 @@ public class CustomerService {
             UUID companyId,
             UUID customerId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Customer customer =
                 customerRepository
                         .findByIdAndCompanyId(
@@ -201,7 +234,9 @@ public class CustomerService {
 
         customer.setActive(false);
 
-        customerRepository.save(customer);
+        customerRepository.save(
+                customer
+        );
     }
 
     /**
@@ -211,6 +246,10 @@ public class CustomerService {
             UUID companyId,
             UUID customerId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Customer customer =
                 customerRepository
                         .findByIdAndCompanyId(
