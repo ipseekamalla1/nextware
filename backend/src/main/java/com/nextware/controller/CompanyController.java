@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.company.CompanyCreateRequest;
 import com.nextware.dto.company.CompanyResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.company.CompanyService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,41 +23,62 @@ import java.util.UUID;
 public class CompanyController {
 
     private final CompanyService companyService;
+    private final CompanySecurityService companySecurityService;
 
-    public CompanyController(CompanyService companyService) {
+    public CompanyController(
+            CompanyService companyService,
+            CompanySecurityService companySecurityService
+    ) {
         this.companyService = companyService;
-    }
-
-    @GetMapping
-    public ResponseEntity<List<CompanyResponse>> getCompanies() {
-        return ResponseEntity.ok(
-                companyService.getCompanies()
-        );
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping("/{companyId}")
     public ResponseEntity<CompanyResponse> getCompany(
             @PathVariable UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
-                companyService.getCompany(companyId)
+                companyService.getCompany(
+                        companyId
+                )
         );
     }
 
     @PostMapping
     public ResponseEntity<CompanyResponse> createCompany(
-            @Valid @RequestBody CompanyCreateRequest request
+            @Valid
+            @RequestBody
+            CompanyCreateRequest request
     ) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(companyService.createCompany(request));
+        /*
+         * Company creation is intentionally not permitted
+         * through the authenticated company-scoped API.
+         *
+         * Company onboarding/creation will be handled later
+         * as part of productization.
+         */
+        throw new org.springframework.web.server.ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Company creation is not permitted through this API"
+        );
     }
 
     @PutMapping("/{companyId}")
     public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable UUID companyId,
-            @Valid @RequestBody CompanyCreateRequest request
+            @Valid
+            @RequestBody
+            CompanyCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 companyService.updateCompany(
                         companyId,
@@ -70,7 +91,13 @@ public class CompanyController {
     public ResponseEntity<Void> deactivateCompany(
             @PathVariable UUID companyId
     ) {
-        companyService.deactivateCompany(companyId);
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        companyService.deactivateCompany(
+                companyId
+        );
 
         return ResponseEntity.noContent().build();
     }
