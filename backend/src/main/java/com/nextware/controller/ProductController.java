@@ -7,6 +7,7 @@ import com.nextware.service.product.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class ProductController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
     public ResponseEntity<List<ProductResponse>> getProducts(
             @RequestParam UUID companyId
     ) {
@@ -52,6 +54,7 @@ public class ProductController {
     }
 
     @GetMapping("/{productId}")
+    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
     public ResponseEntity<ProductResponse> getProduct(
             @RequestParam UUID companyId,
             @PathVariable UUID productId
@@ -69,8 +72,11 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PRODUCT_CREATE')")
     public ResponseEntity<ProductResponse> createProduct(
-            @Valid @RequestBody ProductCreateRequest request
+            @Valid
+            @RequestBody
+            ProductCreateRequest request
     ) {
         companySecurityService.requireCompany(
                 request.getCompanyId()
@@ -86,10 +92,13 @@ public class ProductController {
     }
 
     @PutMapping("/{productId}")
+    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
     public ResponseEntity<ProductResponse> updateProduct(
             @RequestParam UUID companyId,
             @PathVariable UUID productId,
-            @Valid @RequestBody ProductCreateRequest request
+            @Valid
+            @RequestBody
+            ProductCreateRequest request
     ) {
         companySecurityService.requireCompany(
                 companyId
@@ -112,6 +121,7 @@ public class ProductController {
      * Soft delete / deactivate product.
      */
     @DeleteMapping("/{productId}")
+    @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
     public ResponseEntity<Void> deactivateProduct(
             @RequestParam UUID companyId,
             @PathVariable UUID productId
