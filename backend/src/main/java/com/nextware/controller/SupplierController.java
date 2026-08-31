@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.supplier.SupplierCreateRequest;
 import com.nextware.dto.supplier.SupplierResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.supplier.SupplierService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,12 +25,15 @@ import java.util.UUID;
 public class SupplierController {
 
     private final SupplierService supplierService;
+    private final CompanySecurityService companySecurityService;
 
     public SupplierController(
-            SupplierService supplierService
+            SupplierService supplierService,
+            CompanySecurityService companySecurityService
     ) {
-        this.supplierService =
-                supplierService;
+        this.supplierService = supplierService;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping
@@ -37,6 +41,10 @@ public class SupplierController {
     getSuppliers(
             @RequestParam UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 supplierService.getSuppliers(
                         companyId
@@ -50,6 +58,10 @@ public class SupplierController {
             @RequestParam UUID companyId,
             @PathVariable UUID supplierId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 supplierService.getSupplier(
                         companyId,
@@ -65,6 +77,10 @@ public class SupplierController {
             @RequestBody
             SupplierCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
@@ -83,6 +99,14 @@ public class SupplierController {
             @RequestBody
             SupplierCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity.ok(
                 supplierService.updateSupplier(
                         companyId,
@@ -101,6 +125,10 @@ public class SupplierController {
             @RequestParam UUID companyId,
             @PathVariable UUID supplierId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         supplierService.deactivateSupplier(
                 companyId,
                 supplierId
@@ -120,6 +148,10 @@ public class SupplierController {
             @RequestParam UUID companyId,
             @PathVariable UUID supplierId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 supplierService.activateSupplier(
                         companyId,

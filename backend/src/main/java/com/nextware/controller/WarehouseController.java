@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.warehouse.WarehouseCreateRequest;
 import com.nextware.dto.warehouse.WarehouseResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.warehouse.WarehouseService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,12 +25,15 @@ import java.util.UUID;
 public class WarehouseController {
 
     private final WarehouseService warehouseService;
+    private final CompanySecurityService companySecurityService;
 
     public WarehouseController(
-            WarehouseService warehouseService
+            WarehouseService warehouseService,
+            CompanySecurityService companySecurityService
     ) {
-        this.warehouseService =
-                warehouseService;
+        this.warehouseService = warehouseService;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping
@@ -37,6 +41,9 @@ public class WarehouseController {
     getWarehouses(
             @RequestParam UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         return ResponseEntity.ok(
                 warehouseService.getWarehouses(
@@ -51,6 +58,9 @@ public class WarehouseController {
             @RequestParam UUID companyId,
             @PathVariable UUID warehouseId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         return ResponseEntity.ok(
                 warehouseService.getWarehouse(
@@ -67,6 +77,9 @@ public class WarehouseController {
             @RequestBody
             WarehouseCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -86,6 +99,13 @@ public class WarehouseController {
             @RequestBody
             WarehouseCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
 
         return ResponseEntity.ok(
                 warehouseService.updateWarehouse(
@@ -102,6 +122,9 @@ public class WarehouseController {
             @RequestParam UUID companyId,
             @PathVariable UUID warehouseId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         warehouseService.deactivateWarehouse(
                 companyId,
@@ -119,6 +142,9 @@ public class WarehouseController {
             @RequestParam UUID companyId,
             @PathVariable UUID warehouseId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         return ResponseEntity.ok(
                 warehouseService.activateWarehouse(

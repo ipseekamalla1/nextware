@@ -2,9 +2,12 @@ package com.nextware.service.warehouseLocation;
 
 import com.nextware.dto.warehouseLocation.WarehouseLocationCreateRequest;
 import com.nextware.dto.warehouseLocation.WarehouseLocationResponse;
+import com.nextware.entity.Warehouse;
 import com.nextware.entity.WarehouseLocation;
 import com.nextware.mapper.WarehouseLocationMapper;
 import com.nextware.repository.WarehouseLocationRepository;
+import com.nextware.repository.WarehouseRepository;
+import com.nextware.security.CompanySecurityService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,30 +29,42 @@ public class WarehouseLocationService {
                     "DAMAGED"
             );
 
-    private final WarehouseLocationRepository
-            warehouseLocationRepository;
-
-    private final WarehouseLocationMapper
-            warehouseLocationMapper;
+    private final WarehouseLocationRepository warehouseLocationRepository;
+    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLocationMapper warehouseLocationMapper;
+    private final CompanySecurityService companySecurityService;
 
     public WarehouseLocationService(
             WarehouseLocationRepository warehouseLocationRepository,
-            WarehouseLocationMapper warehouseLocationMapper
+            WarehouseRepository warehouseRepository,
+            WarehouseLocationMapper warehouseLocationMapper,
+            CompanySecurityService companySecurityService
     ) {
         this.warehouseLocationRepository =
                 warehouseLocationRepository;
 
+        this.warehouseRepository =
+                warehouseRepository;
+
         this.warehouseLocationMapper =
                 warehouseLocationMapper;
+
+        this.companySecurityService =
+                companySecurityService;
     }
 
     /**
-     * Get all locations belonging to a warehouse.
+     * Get all locations belonging to a warehouse
+     * owned by the authenticated company.
      */
     public List<WarehouseLocationResponse>
     getWarehouseLocations(
             UUID warehouseId
     ) {
+        requireAuthenticatedWarehouse(
+                warehouseId
+        );
+
         return warehouseLocationRepository
                 .findAllByWarehouseIdOrderByCodeAsc(
                         warehouseId
@@ -62,12 +77,17 @@ public class WarehouseLocationService {
     }
 
     /**
-     * Get one warehouse location.
+     * Get one warehouse location belonging to
+     * a warehouse owned by the authenticated company.
      */
     public WarehouseLocationResponse getWarehouseLocation(
             UUID warehouseId,
             UUID locationId
     ) {
+        requireAuthenticatedWarehouse(
+                warehouseId
+        );
+
         WarehouseLocation location =
                 warehouseLocationRepository
                         .findByIdAndWarehouseId(
@@ -93,6 +113,12 @@ public class WarehouseLocationService {
     public WarehouseLocationResponse createWarehouseLocation(
             WarehouseLocationCreateRequest request
     ) {
+        UUID warehouseId =
+                request.getWarehouseId();
+
+        requireAuthenticatedWarehouse(
+                warehouseId
+        );
 
         validateLocationType(
                 request.getLocationType()
@@ -104,7 +130,7 @@ public class WarehouseLocationService {
         if (
                 warehouseLocationRepository
                         .existsByWarehouseIdAndCode(
-                                request.getWarehouseId(),
+                                warehouseId,
                                 code
                         )
         ) {
@@ -137,6 +163,9 @@ public class WarehouseLocationService {
             UUID locationId,
             WarehouseLocationCreateRequest request
     ) {
+        requireAuthenticatedWarehouse(
+                warehouseId
+        );
 
         if (
                 !warehouseId.equals(
@@ -206,6 +235,10 @@ public class WarehouseLocationService {
             UUID warehouseId,
             UUID locationId
     ) {
+        requireAuthenticatedWarehouse(
+                warehouseId
+        );
+
         WarehouseLocation location =
                 warehouseLocationRepository
                         .findByIdAndWarehouseId(
@@ -238,6 +271,10 @@ public class WarehouseLocationService {
             UUID warehouseId,
             UUID locationId
     ) {
+        requireAuthenticatedWarehouse(
+                warehouseId
+        );
+
         WarehouseLocation location =
                 warehouseLocationRepository
                         .findByIdAndWarehouseId(
@@ -253,7 +290,6 @@ public class WarehouseLocationService {
                         );
 
         if (!location.isActive()) {
-
             location.setActive(true);
 
             location =
@@ -267,13 +303,38 @@ public class WarehouseLocationService {
         );
     }
 
+    /**
+     * Resolves the warehouse and verifies that
+     * the warehouse belongs to the authenticated company.
+     */
+    private Warehouse requireAuthenticatedWarehouse(
+            UUID warehouseId
+    ) {
+        Warehouse warehouse =
+                warehouseRepository
+                        .findByIdAndCompanyId(
+                                warehouseId,
+                                companySecurityService
+                                        .getAuthenticatedCompanyId()
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Warehouse not found"
+                                        )
+                        );
+
+        return warehouse;
+    }
+
     private void validateLocationType(
             String locationType
     ) {
-
-        if (locationType == null ||
-                locationType.trim().isEmpty()) {
-
+        if (
+                locationType == null ||
+                locationType.trim().isEmpty()
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Location type is required"

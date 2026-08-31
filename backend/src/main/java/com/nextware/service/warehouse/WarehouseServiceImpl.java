@@ -7,8 +7,11 @@ import com.nextware.entity.Warehouse;
 import com.nextware.mapper.WarehouseMapper;
 import com.nextware.repository.CompanyRepository;
 import com.nextware.repository.WarehouseRepository;
+import com.nextware.security.CompanySecurityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,11 +25,13 @@ public class WarehouseServiceImpl
     private final WarehouseRepository warehouseRepository;
     private final CompanyRepository companyRepository;
     private final WarehouseMapper warehouseMapper;
+    private final CompanySecurityService companySecurityService;
 
     public WarehouseServiceImpl(
             WarehouseRepository warehouseRepository,
             CompanyRepository companyRepository,
-            WarehouseMapper warehouseMapper
+            WarehouseMapper warehouseMapper,
+            CompanySecurityService companySecurityService
     ) {
         this.warehouseRepository =
                 warehouseRepository;
@@ -36,6 +41,9 @@ public class WarehouseServiceImpl
 
         this.warehouseMapper =
                 warehouseMapper;
+
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @Override
@@ -43,6 +51,9 @@ public class WarehouseServiceImpl
     public List<WarehouseResponse> getWarehouses(
             UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         return warehouseRepository
                 .findByCompanyId(companyId)
@@ -57,6 +68,9 @@ public class WarehouseServiceImpl
             UUID companyId,
             UUID warehouseId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         Warehouse warehouse =
                 warehouseRepository
@@ -65,7 +79,8 @@ public class WarehouseServiceImpl
                                 companyId
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
                                         "Warehouse not found"
                                 )
                         );
@@ -79,25 +94,32 @@ public class WarehouseServiceImpl
     public WarehouseResponse createWarehouse(
             WarehouseCreateRequest request
     ) {
+        UUID companyId =
+                request.getCompanyId();
+
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         Company company =
                 companyRepository
-                        .findById(
-                                request.getCompanyId()
-                        )
+                        .findById(companyId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
                                         "Company not found"
                                 )
                         );
 
-        if (warehouseRepository
-                .existsByCompanyIdAndCode(
-                        request.getCompanyId(),
-                        request.getCode()
-                )) {
-
-            throw new RuntimeException(
+        if (
+                warehouseRepository
+                        .existsByCompanyIdAndCode(
+                                companyId,
+                                request.getCode()
+                        )
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
                     "Warehouse code already exists for this company"
             );
         }
@@ -123,6 +145,20 @@ public class WarehouseServiceImpl
             UUID warehouseId,
             WarehouseCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        if (
+                !companyId.equals(
+                        request.getCompanyId()
+                )
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Company ID cannot be changed"
+            );
+        }
 
         Warehouse warehouse =
                 warehouseRepository
@@ -131,19 +167,22 @@ public class WarehouseServiceImpl
                                 companyId
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
                                         "Warehouse not found"
                                 )
                         );
 
-        if (warehouseRepository
-                .existsByCompanyIdAndCodeAndIdNot(
-                        companyId,
-                        request.getCode(),
-                        warehouseId
-                )) {
-
-            throw new RuntimeException(
+        if (
+                warehouseRepository
+                        .existsByCompanyIdAndCodeAndIdNot(
+                                companyId,
+                                request.getCode(),
+                                warehouseId
+                        )
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
                     "Warehouse code already exists for this company"
             );
         }
@@ -168,6 +207,9 @@ public class WarehouseServiceImpl
             UUID companyId,
             UUID warehouseId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         Warehouse warehouse =
                 warehouseRepository
@@ -176,10 +218,15 @@ public class WarehouseServiceImpl
                                 companyId
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
                                         "Warehouse not found"
                                 )
                         );
+
+        if (!warehouse.isActive()) {
+            return;
+        }
 
         warehouse.setActive(false);
 
@@ -193,6 +240,9 @@ public class WarehouseServiceImpl
             UUID companyId,
             UUID warehouseId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         Warehouse warehouse =
                 warehouseRepository
@@ -201,20 +251,23 @@ public class WarehouseServiceImpl
                                 companyId
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
                                         "Warehouse not found"
                                 )
                         );
 
-        warehouse.setActive(true);
+        if (!warehouse.isActive()) {
+            warehouse.setActive(true);
 
-        Warehouse updatedWarehouse =
-                warehouseRepository.save(
-                        warehouse
-                );
+            warehouse =
+                    warehouseRepository.save(
+                            warehouse
+                    );
+        }
 
         return warehouseMapper.toResponse(
-                updatedWarehouse
+                warehouse
         );
     }
 }

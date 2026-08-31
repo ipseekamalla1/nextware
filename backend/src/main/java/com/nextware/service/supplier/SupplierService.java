@@ -5,6 +5,7 @@ import com.nextware.dto.supplier.SupplierResponse;
 import com.nextware.entity.Supplier;
 import com.nextware.mapper.SupplierMapper;
 import com.nextware.repository.SupplierRepository;
+import com.nextware.security.CompanySecurityService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,26 +17,31 @@ import java.util.UUID;
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
-
     private final SupplierMapper supplierMapper;
+    private final CompanySecurityService companySecurityService;
 
     public SupplierService(
             SupplierRepository supplierRepository,
-            SupplierMapper supplierMapper
+            SupplierMapper supplierMapper,
+            CompanySecurityService companySecurityService
     ) {
-        this.supplierRepository =
-                supplierRepository;
-
-        this.supplierMapper =
-                supplierMapper;
+        this.supplierRepository = supplierRepository;
+        this.supplierMapper = supplierMapper;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     /**
-     * Get all suppliers belonging to a company.
+     * Get all suppliers belonging to
+     * the authenticated company.
      */
     public List<SupplierResponse> getSuppliers(
             UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return supplierRepository
                 .findAllByCompanyIdOrderByNameAsc(
                         companyId
@@ -46,12 +52,17 @@ public class SupplierService {
     }
 
     /**
-     * Get one supplier belonging to a company.
+     * Get one supplier belonging to
+     * the authenticated company.
      */
     public SupplierResponse getSupplier(
             UUID companyId,
             UUID supplierId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Supplier supplier =
                 supplierRepository
                         .findByIdAndCompanyId(
@@ -72,18 +83,27 @@ public class SupplierService {
     }
 
     /**
-     * Create a supplier.
+     * Create a supplier for the
+     * authenticated company.
      */
     public SupplierResponse createSupplier(
             SupplierCreateRequest request
     ) {
+        UUID companyId =
+                request.getCompanyId();
+
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         String supplierCode =
-                request.getSupplierCode().trim();
+                request.getSupplierCode()
+                        .trim();
 
         if (
                 supplierRepository
                         .existsByCompanyIdAndSupplierCode(
-                                request.getCompanyId(),
+                                companyId,
                                 supplierCode
                         )
         ) {
@@ -109,13 +129,17 @@ public class SupplierService {
     }
 
     /**
-     * Update a supplier.
+     * Update a supplier belonging to
+     * the authenticated company.
      */
     public SupplierResponse updateSupplier(
             UUID companyId,
             UUID supplierId,
             SupplierCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
 
         if (
                 !companyId.equals(
@@ -143,7 +167,8 @@ public class SupplierService {
                         );
 
         String supplierCode =
-                request.getSupplierCode().trim();
+                request.getSupplierCode()
+                        .trim();
 
         if (
                 supplierRepository
@@ -175,12 +200,16 @@ public class SupplierService {
     }
 
     /**
-     * Soft delete / deactivate a supplier.
+     * Soft delete / deactivate supplier.
      */
     public void deactivateSupplier(
             UUID companyId,
             UUID supplierId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Supplier supplier =
                 supplierRepository
                         .findByIdAndCompanyId(
@@ -207,12 +236,16 @@ public class SupplierService {
     }
 
     /**
-     * Activate a supplier.
+     * Activate supplier.
      */
     public SupplierResponse activateSupplier(
             UUID companyId,
             UUID supplierId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         Supplier supplier =
                 supplierRepository
                         .findByIdAndCompanyId(

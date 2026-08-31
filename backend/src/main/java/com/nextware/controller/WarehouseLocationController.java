@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.warehouseLocation.WarehouseLocationCreateRequest;
 import com.nextware.dto.warehouseLocation.WarehouseLocationResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.warehouseLocation.WarehouseLocationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -23,14 +24,18 @@ import java.util.UUID;
 @RequestMapping("/api/warehouse-locations")
 public class WarehouseLocationController {
 
-    private final WarehouseLocationService
-            warehouseLocationService;
+    private final WarehouseLocationService warehouseLocationService;
+    private final CompanySecurityService companySecurityService;
 
     public WarehouseLocationController(
-            WarehouseLocationService warehouseLocationService
+            WarehouseLocationService warehouseLocationService,
+            CompanySecurityService companySecurityService
     ) {
         this.warehouseLocationService =
                 warehouseLocationService;
+
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping
