@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.unit.UnitOfMeasureCreateRequest;
 import com.nextware.dto.unit.UnitOfMeasureResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.unit.UnitOfMeasureService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,19 +25,29 @@ import java.util.UUID;
 public class UnitOfMeasureController {
 
     private final UnitOfMeasureService unitOfMeasureService;
+    private final CompanySecurityService companySecurityService;
 
     public UnitOfMeasureController(
-            UnitOfMeasureService unitOfMeasureService
+            UnitOfMeasureService unitOfMeasureService,
+            CompanySecurityService companySecurityService
     ) {
         this.unitOfMeasureService = unitOfMeasureService;
+        this.companySecurityService =
+                companySecurityService;
     }
 
     @GetMapping
     public ResponseEntity<List<UnitOfMeasureResponse>> getUnits(
             @RequestParam UUID companyId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
-                unitOfMeasureService.getUnits(companyId)
+                unitOfMeasureService.getUnits(
+                        companyId
+                )
         );
     }
 
@@ -45,6 +56,10 @@ public class UnitOfMeasureController {
             @RequestParam UUID companyId,
             @PathVariable UUID unitId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         return ResponseEntity.ok(
                 unitOfMeasureService.getUnit(
                         companyId,
@@ -55,12 +70,20 @@ public class UnitOfMeasureController {
 
     @PostMapping
     public ResponseEntity<UnitOfMeasureResponse> createUnit(
-            @Valid @RequestBody UnitOfMeasureCreateRequest request
+            @Valid
+            @RequestBody
+            UnitOfMeasureCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        unitOfMeasureService.createUnit(request)
+                        unitOfMeasureService.createUnit(
+                                request
+                        )
                 );
     }
 
@@ -68,8 +91,18 @@ public class UnitOfMeasureController {
     public ResponseEntity<UnitOfMeasureResponse> updateUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId,
-            @Valid @RequestBody UnitOfMeasureCreateRequest request
+            @Valid
+            @RequestBody
+            UnitOfMeasureCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity.ok(
                 unitOfMeasureService.updateUnit(
                         companyId,
@@ -84,6 +117,10 @@ public class UnitOfMeasureController {
             @RequestParam UUID companyId,
             @PathVariable UUID unitId
     ) {
+        companySecurityService.requireCompany(
+                companyId
+        );
+
         unitOfMeasureService.deactivateUnit(
                 companyId,
                 unitId
