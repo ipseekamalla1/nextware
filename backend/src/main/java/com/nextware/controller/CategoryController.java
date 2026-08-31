@@ -2,6 +2,7 @@ package com.nextware.controller;
 
 import com.nextware.dto.category.CategoryCreateRequest;
 import com.nextware.dto.category.CategoryResponse;
+import com.nextware.security.CompanySecurityService;
 import com.nextware.service.category.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,32 +25,34 @@ import java.util.UUID;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final CompanySecurityService companySecurityService;
 
     public CategoryController(
-            CategoryService categoryService
+            CategoryService categoryService,
+            CompanySecurityService companySecurityService
     ) {
-        this.categoryService =
-                categoryService;
+        this.categoryService = categoryService;
+        this.companySecurityService = companySecurityService;
     }
 
     @GetMapping
-    public ResponseEntity<List<CategoryResponse>>
-    getCategories(
+    public ResponseEntity<List<CategoryResponse>> getCategories(
             @RequestParam UUID companyId
     ) {
+        companySecurityService.requireCompany(companyId);
+
         return ResponseEntity.ok(
-                categoryService.getCategories(
-                        companyId
-                )
+                categoryService.getCategories(companyId)
         );
     }
 
     @GetMapping("/{categoryId}")
-    public ResponseEntity<CategoryResponse>
-    getCategory(
+    public ResponseEntity<CategoryResponse> getCategory(
             @RequestParam UUID companyId,
             @PathVariable UUID categoryId
     ) {
+        companySecurityService.requireCompany(companyId);
+
         return ResponseEntity.ok(
                 categoryService.getCategory(
                         companyId,
@@ -59,30 +62,36 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<CategoryResponse>
-    createCategory(
+    public ResponseEntity<CategoryResponse> createCategory(
             @Valid
             @RequestBody
             CategoryCreateRequest request
     ) {
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        categoryService.createCategory(
-                                request
-                        )
+                        categoryService.createCategory(request)
                 );
     }
 
     @PutMapping("/{categoryId}")
-    public ResponseEntity<CategoryResponse>
-    updateCategory(
+    public ResponseEntity<CategoryResponse> updateCategory(
             @RequestParam UUID companyId,
             @PathVariable UUID categoryId,
             @Valid
             @RequestBody
             CategoryCreateRequest request
     ) {
+        companySecurityService.requireCompany(companyId);
+
+        companySecurityService.requireCompany(
+                request.getCompanyId()
+        );
+
         return ResponseEntity.ok(
                 categoryService.updateCategory(
                         companyId,
@@ -96,11 +105,12 @@ public class CategoryController {
      * Soft delete / deactivate category.
      */
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<Void>
-    deactivateCategory(
+    public ResponseEntity<Void> deactivateCategory(
             @RequestParam UUID companyId,
             @PathVariable UUID categoryId
     ) {
+        companySecurityService.requireCompany(companyId);
+
         categoryService.deactivateCategory(
                 companyId,
                 categoryId

@@ -5,6 +5,7 @@ import com.nextware.dto.category.CategoryResponse;
 import com.nextware.entity.Category;
 import com.nextware.mapper.CategoryMapper;
 import com.nextware.repository.CategoryRepository;
+import com.nextware.security.CompanySecurityService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,40 +18,44 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final CompanySecurityService companySecurityService;
 
     public CategoryService(
             CategoryRepository categoryRepository,
-            CategoryMapper categoryMapper
+            CategoryMapper categoryMapper,
+            CompanySecurityService companySecurityService
     ) {
-        this.categoryRepository =
-                categoryRepository;
-
-        this.categoryMapper =
-                categoryMapper;
+        this.categoryRepository = categoryRepository;
+        this.categoryMapper = categoryMapper;
+        this.companySecurityService = companySecurityService;
     }
 
     /**
-     * Get all categories belonging to a company.
+     * Get all categories belonging to
+     * the authenticated company.
      */
     public List<CategoryResponse> getCategories(
             UUID companyId
     ) {
+        companySecurityService.requireCompany(companyId);
+
         return categoryRepository
-                .findAllByCompanyIdOrderByNameAsc(
-                        companyId
-                )
+                .findAllByCompanyIdOrderByNameAsc(companyId)
                 .stream()
                 .map(categoryMapper::toResponse)
                 .toList();
     }
 
     /**
-     * Get one category belonging to a company.
+     * Get one category belonging to
+     * the authenticated company.
      */
     public CategoryResponse getCategory(
             UUID companyId,
             UUID categoryId
     ) {
+        companySecurityService.requireCompany(companyId);
+
         Category category =
                 categoryRepository
                         .findByIdAndCompanyId(
@@ -65,26 +70,27 @@ public class CategoryService {
                                         )
                         );
 
-        return categoryMapper.toResponse(
-                category
-        );
+        return categoryMapper.toResponse(category);
     }
 
     /**
-     * Create a category.
+     * Create a category for the
+     * authenticated company.
      */
     public CategoryResponse createCategory(
             CategoryCreateRequest request
     ) {
-        String name =
-                request.getName().trim();
+        UUID companyId = request.getCompanyId();
+
+        companySecurityService.requireCompany(companyId);
+
+        String name = request.getName().trim();
 
         if (
-                categoryRepository
-                        .existsByCompanyIdAndName(
-                                request.getCompanyId(),
-                                name
-                        )
+                categoryRepository.existsByCompanyIdAndName(
+                        companyId,
+                        name
+                )
         ) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -93,28 +99,24 @@ public class CategoryService {
         }
 
         Category category =
-                categoryMapper.toEntity(
-                        request
-                );
+                categoryMapper.toEntity(request);
 
         Category savedCategory =
-                categoryRepository.save(
-                        category
-                );
+                categoryRepository.save(category);
 
-        return categoryMapper.toResponse(
-                savedCategory
-        );
+        return categoryMapper.toResponse(savedCategory);
     }
 
     /**
-     * Update a category.
+     * Update a category belonging to
+     * the authenticated company.
      */
     public CategoryResponse updateCategory(
             UUID companyId,
             UUID categoryId,
             CategoryCreateRequest request
     ) {
+        companySecurityService.requireCompany(companyId);
 
         if (
                 !companyId.equals(
@@ -141,8 +143,7 @@ public class CategoryService {
                                         )
                         );
 
-        String name =
-                request.getName().trim();
+        String name = request.getName().trim();
 
         if (
                 categoryRepository
@@ -164,13 +165,9 @@ public class CategoryService {
         );
 
         Category updatedCategory =
-                categoryRepository.save(
-                        category
-                );
+                categoryRepository.save(category);
 
-        return categoryMapper.toResponse(
-                updatedCategory
-        );
+        return categoryMapper.toResponse(updatedCategory);
     }
 
     /**
@@ -180,6 +177,8 @@ public class CategoryService {
             UUID companyId,
             UUID categoryId
     ) {
+        companySecurityService.requireCompany(companyId);
+
         Category category =
                 categoryRepository
                         .findByIdAndCompanyId(
