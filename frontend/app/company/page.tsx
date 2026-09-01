@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -25,8 +26,6 @@ interface CompanyForm {
   email: string;
   phone: string;
 }
-
-const API_BASE_URL = "http://localhost:8080";
 
 export default function CompanyPage() {
   const [company, setCompany] = useState<Company | null>(null);
@@ -87,7 +86,7 @@ export default function CompanyPage() {
       setError(null);
 
       const response = await authFetch(
-        `${API_BASE_URL}/api/companies/${encodeURIComponent(companyId)}`,
+        `/api/companies/${encodeURIComponent(companyId)}`,
         {
           method: "GET",
           cache: "no-store",
@@ -169,9 +168,7 @@ export default function CompanyPage() {
 
     try {
       const response = await authFetch(
-        `${API_BASE_URL}/api/companies/${encodeURIComponent(
-          company.id
-        )}`,
+        `/api/companies/${encodeURIComponent(company.id)}`,
         {
           method: "PUT",
           headers: {
@@ -456,3 +453,4 @@ export default function CompanyPage() {
     </AppShell>
   );
 }
+
