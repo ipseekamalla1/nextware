@@ -7,12 +7,13 @@ import {
   createWarehouse,
   WarehouseCreateRequest,
 } from "@/lib/api";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
-
-const initialForm: WarehouseCreateRequest = {
-  companyId: COMPANY_ID,
+const emptyForm: WarehouseCreateRequest = {
+  companyId: "",
   code: "",
   name: "",
   addressLine1: "",
@@ -82,9 +83,13 @@ function SectionTitle({
 export default function NewWarehousePage() {
   const router = useRouter();
 
+  const companyId = getCurrentCompanyId();
+  const canCreate = hasPermission("WAREHOUSE_CREATE");
+
   const [form, setForm] =
     useState<WarehouseCreateRequest>({
-      ...initialForm,
+      ...emptyForm,
+      companyId: companyId ?? "",
     });
 
   const [saving, setSaving] = useState(false);
@@ -106,6 +111,20 @@ export default function NewWarehousePage() {
   ) {
     event.preventDefault();
 
+    if (!canCreate) {
+      setError(
+        "You do not have permission to create warehouses."
+      );
+      return;
+    }
+
+    if (!companyId) {
+      setError(
+        "Your authenticated company could not be determined. Please sign in again."
+      );
+      return;
+    }
+
     if (!form.code.trim()) {
       setError("Warehouse Code is required.");
       return;
@@ -123,7 +142,7 @@ export default function NewWarehousePage() {
       const warehouse =
         await createWarehouse({
           ...form,
-          companyId: COMPANY_ID,
+          companyId,
           code: form.code.trim(),
           name: form.name.trim(),
           addressLine1:
@@ -153,6 +172,63 @@ export default function NewWarehousePage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!canCreate) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Access denied
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              You do not have permission to create warehouses.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!companyId) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Company context unavailable
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              Your authenticated company could not be determined.
+              Please sign in again.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   return (

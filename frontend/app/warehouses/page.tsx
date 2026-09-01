@@ -9,6 +9,7 @@ import {
   getWarehouses,
   Warehouse,
 } from "@/lib/api";
+import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
 import {
@@ -21,13 +22,16 @@ import {
   SearchIcon,
 } from "@/components/ui/icons";
 
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
-
 type DialogType = "activate" | "deactivate" | null;
 
 export default function WarehousesPage() {
   const router = useRouter();
+
+  const companyId = getCurrentCompanyId();
+  const canView = hasPermission("WAREHOUSE_VIEW");
+  const canCreate = hasPermission("WAREHOUSE_CREATE");
+  const canUpdate = hasPermission("WAREHOUSE_UPDATE");
+  const canDelete = hasPermission("WAREHOUSE_DELETE");
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [search, setSearch] = useState("");
@@ -51,8 +55,10 @@ export default function WarehousesPage() {
   } | null>(null);
 
   useEffect(() => {
+    if (!canView || !companyId) return;
+
     loadWarehouses();
-  }, []);
+  }, [canView, companyId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -66,11 +72,13 @@ export default function WarehousesPage() {
   }, [toast]);
 
   async function loadWarehouses() {
+    if (!companyId || !canView) return;
+
     try {
       setLoading(true);
       setError(null);
 
-      const data = await getWarehouses(COMPANY_ID);
+      const data = await getWarehouses(companyId);
 
       setWarehouses(data);
     } catch (err) {
@@ -123,6 +131,8 @@ export default function WarehousesPage() {
   function openStatusDialog(
     warehouse: Warehouse
   ) {
+    if (!canDelete) return;
+
     setDialogWarehouse(warehouse);
     setDialogType(
       warehouse.active
@@ -139,14 +149,21 @@ export default function WarehousesPage() {
   }
 
   async function confirmStatusChange() {
-    if (!dialogWarehouse || !dialogType) return;
+    if (
+      !dialogWarehouse ||
+      !dialogType ||
+      !companyId ||
+      !canDelete
+    ) {
+      return;
+    }
 
     setActionLoading(true);
 
     try {
       if (dialogType === "deactivate") {
         await deactivateWarehouse(
-          COMPANY_ID,
+          companyId,
           dialogWarehouse.id
         );
 
@@ -169,7 +186,7 @@ export default function WarehousesPage() {
       } else {
         const updated =
           await activateWarehouse(
-            COMPANY_ID,
+            companyId,
             dialogWarehouse.id
           );
 
@@ -202,6 +219,43 @@ export default function WarehousesPage() {
     }
   }
 
+  if (!canView) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Access denied
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              You do not have permission to view warehouses.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!companyId) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Company context unavailable
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              Your authenticated company could not be determined.
+              Please sign in again.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="p-6 lg:p-8">
@@ -222,16 +276,18 @@ export default function WarehousesPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                router.push("/warehouses/new")
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              <PlusIcon />
-              New Warehouse
-            </button>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push("/warehouses/new")
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+              >
+                <PlusIcon />
+                New Warehouse
+              </button>
+            )}
           </div>
         </div>
 
@@ -326,7 +382,8 @@ export default function WarehousesPage() {
 
               {!search &&
                 statusFilter ===
-                  "All Statuses" && (
+                  "All Statuses" &&
+                canCreate && (
                   <button
                     type="button"
                     onClick={() =>
@@ -417,46 +474,52 @@ export default function WarehousesPage() {
 
                           <td className="px-5 py-4">
                             <div className="flex justify-end gap-2">
-                              <IconButton
-                                label="View"
-                                onClick={() =>
-                                  router.push(
-                                    `/warehouses/view?id=${encodeURIComponent(
-                                      warehouse.id
-                                    )}`
-                                  )
-                                }
-                              >
-                                <EyeIcon />
-                              </IconButton>
+                              {canView && (
+                                <IconButton
+                                  label="View"
+                                  onClick={() =>
+                                    router.push(
+                                      `/warehouses/view?id=${encodeURIComponent(
+                                        warehouse.id
+                                      )}`
+                                    )
+                                  }
+                                >
+                                  <EyeIcon />
+                                </IconButton>
+                              )}
 
-                              <IconButton
-                                label="Edit"
-                                onClick={() =>
-                                  router.push(
-                                    `/warehouses/view?id=${encodeURIComponent(
-                                      warehouse.id
-                                    )}&edit=true`
-                                  )
-                                }
-                              >
-                                <EditIcon />
-                              </IconButton>
+                              {canUpdate && (
+                                <IconButton
+                                  label="Edit"
+                                  onClick={() =>
+                                    router.push(
+                                      `/warehouses/view?id=${encodeURIComponent(
+                                        warehouse.id
+                                      )}&edit=true`
+                                    )
+                                  }
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              )}
 
-                              <IconButton
-                                label={
-                                  warehouse.active
-                                    ? "Deactivate"
-                                    : "Activate"
-                                }
-                                onClick={() =>
-                                  openStatusDialog(
-                                    warehouse
-                                  )
-                                }
-                              >
-                                <PowerIcon />
-                              </IconButton>
+                              {canDelete && (
+                                <IconButton
+                                  label={
+                                    warehouse.active
+                                      ? "Deactivate"
+                                      : "Activate"
+                                  }
+                                  onClick={() =>
+                                    openStatusDialog(
+                                      warehouse
+                                    )
+                                  }
+                                >
+                                  <PowerIcon />
+                                </IconButton>
+                              )}
                             </div>
                           </td>
                         </tr>
