@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "@/lib/config";
+
 export const AUTH_STORAGE_KEY = "nextware-auth";
 
 export interface LoginRequest {
@@ -27,8 +29,6 @@ export interface AuthSession {
   roles: string[];
   permissions: string[];
 }
-
-const API_BASE_URL = "http://localhost:8080";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";

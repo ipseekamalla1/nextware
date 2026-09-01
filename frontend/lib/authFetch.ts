@@ -2,8 +2,7 @@ import {
   clearSession,
   getAccessToken,
 } from "@/lib/auth";
-
-const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL } from "@/lib/config";
 
 export function getApiBaseUrl(): string {
   return API_BASE_URL;

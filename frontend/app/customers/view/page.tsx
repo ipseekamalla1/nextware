@@ -13,9 +13,7 @@ import {
   updateCustomer,
 } from "@/lib/api";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { getCurrentCompanyId } from "@/lib/auth";
 
 function ArrowLeftIcon() {
   return (
@@ -200,12 +198,20 @@ function CustomerViewPageContent() {
         return;
       }
 
+      const companyId = getCurrentCompanyId();
+
+      if (!companyId) {
+        setError("Your session has expired. Please sign in again.");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
         const data = await getCustomer(
-          COMPANY_ID,
+          companyId,
           customerId
         );
 
@@ -402,17 +408,24 @@ function CustomerViewPageContent() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setSaveError("Your session has expired. Please sign in again.");
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
 
     try {
       const updated =
         await updateCustomer(
-          COMPANY_ID,
+          companyId,
           customerId,
           {
             ...form,
-            companyId: COMPANY_ID,
+            companyId,
             customerCode:
               form.customerCode.trim(),
             name: form.name.trim(),

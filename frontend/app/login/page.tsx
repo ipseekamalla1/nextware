@@ -10,10 +10,8 @@ import {
   LoginRequest,
   getStoredSession,
 } from "@/lib/auth";
+import { DEFAULT_COMPANY_ID } from "@/lib/config";
 import { useAuth } from "@/components/auth/AuthProvider";
-
-const DEFAULT_COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,7 +25,7 @@ export default function LoginPage() {
     useState(DEFAULT_COMPANY_ID);
 
   const [username, setUsername] =
-    useState("admin");
+    useState("");
 
   const [password, setPassword] =
     useState("");

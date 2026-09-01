@@ -18,6 +18,10 @@ dist/
 .env
 .env.*
 !.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env.local
 
 # Logs
 *.log
@@ -28,5 +32,9 @@ src-tauri/target/
 # Build output
 build/
 
-# Local database/data
-*.dbbackend/.env
+# Local database / backups
+*.db
+backups/
+*.dump
+*.sql.gz
+*.backup

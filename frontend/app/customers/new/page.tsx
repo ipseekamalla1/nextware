@@ -7,12 +7,10 @@ import {
   createCustomer,
   CustomerCreateRequest,
 } from "@/lib/api";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { getCurrentCompanyId } from "@/lib/auth";
 
 const initialForm: CustomerCreateRequest = {
-  companyId: COMPANY_ID,
+  companyId: "",
   customerCode: "",
   name: "",
   email: "",
@@ -186,6 +184,13 @@ export default function NewCustomerPage() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -193,7 +198,7 @@ export default function NewCustomerPage() {
       const customer =
         await createCustomer({
           ...form,
-          companyId: COMPANY_ID,
+          companyId,
           customerCode:
             form.customerCode.trim(),
           name: form.name.trim(),

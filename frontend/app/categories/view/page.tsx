@@ -13,9 +13,7 @@ import {
   CategoryCreateRequest,
 } from "@/lib/api";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { getCurrentCompanyId } from "@/lib/auth";
 
 function ArrowLeftIcon() {
   return (
@@ -155,12 +153,23 @@ function CategoryViewPageContent() {
         return;
       }
 
+      const companyId = getCurrentCompanyId();
+
+      if (!companyId) {
+        if (!cancelled) {
+          setError("Your session has expired. Please sign in again.");
+          setLoading(false);
+        }
+
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
         const data = await getCategory(
-          COMPANY_ID,
+          companyId,
           categoryId
         );
 
@@ -250,13 +259,20 @@ function CategoryViewPageContent() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setUpdateError("Your session has expired. Please sign in again.");
+      return;
+    }
+
     setUpdating(true);
     setUpdateError(null);
     setUpdateSuccess(false);
 
     try {
       const request: CategoryCreateRequest = {
-        companyId: COMPANY_ID,
+        companyId,
         name: editForm.name.trim(),
         description:
           editForm.description?.trim() ||
@@ -266,7 +282,7 @@ function CategoryViewPageContent() {
 
       const updatedCategory =
         await updateCategory(
-          COMPANY_ID,
+          companyId,
           categoryId,
           request
         );

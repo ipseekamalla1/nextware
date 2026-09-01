@@ -20,9 +20,7 @@ import {
   PowerIcon,
   SearchIcon,
 } from "@/components/ui/icons";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { getCurrentCompanyId } from "@/lib/auth";
 
 type DialogType = "activate" | "deactivate" | null;
 
@@ -75,7 +73,14 @@ export default function CustomersPage() {
       setLoading(true);
       setError(null);
 
-      const data = await getCustomers(COMPANY_ID);
+      const companyId = getCurrentCompanyId();
+
+      if (!companyId) {
+        setError("Your session has expired. Please sign in again.");
+        return;
+      }
+
+      const data = await getCustomers(companyId);
 
       setCustomers(data);
     } catch (err) {
@@ -144,12 +149,22 @@ export default function CustomersPage() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setToast({
+        type: "error",
+        message: "Your session has expired. Please sign in again.",
+      });
+      return;
+    }
+
     setActionLoading(true);
 
     try {
       if (dialogType === "deactivate") {
         await deactivateCustomer(
-          COMPANY_ID,
+          companyId,
           dialogCustomer.id
         );
 
@@ -172,7 +187,7 @@ export default function CustomersPage() {
       } else {
         const updatedCustomer =
           await activateCustomer(
-            COMPANY_ID,
+            companyId,
             dialogCustomer
           );
 

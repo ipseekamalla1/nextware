@@ -14,8 +14,7 @@ import {
   UnitOfMeasure,
   updateProduct,
 } from "@/lib/api";
-
-const COMPANY_ID = "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { getCurrentCompanyId } from "@/lib/auth";
 
 /* =========================================================
    ICONS
@@ -169,14 +168,25 @@ function ProductViewPageContent() {
         return;
       }
 
+      const companyId = getCurrentCompanyId();
+
+      if (!companyId) {
+        if (!cancelled) {
+          setError("Your session has expired. Please sign in again.");
+          setLoading(false);
+        }
+
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
         const [productData, categoryData, unitData] = await Promise.all([
-          getProduct(COMPANY_ID, productId),
-          getCategories(COMPANY_ID),
-          getUnitsOfMeasure(COMPANY_ID),
+          getProduct(companyId, productId),
+          getCategories(companyId),
+          getUnitsOfMeasure(companyId),
         ]);
 
         if (!cancelled) {
@@ -292,13 +302,20 @@ function ProductViewPageContent() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setUpdateError("Your session has expired. Please sign in again.");
+      return;
+    }
+
     setUpdating(true);
     setUpdateError(null);
     setUpdateSuccess(false);
 
     try {
       const request: ProductCreateRequest = {
-        companyId: COMPANY_ID,
+        companyId,
 
         categoryId:
           editForm.categoryId || null,
@@ -332,7 +349,7 @@ function ProductViewPageContent() {
 
       const updatedProduct =
         await updateProduct(
-          COMPANY_ID,
+          companyId,
           productId,
           request
         );

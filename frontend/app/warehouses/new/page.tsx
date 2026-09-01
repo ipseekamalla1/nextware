@@ -7,12 +7,10 @@ import {
   createWarehouse,
   WarehouseCreateRequest,
 } from "@/lib/api";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import { getCurrentCompanyId } from "@/lib/auth";
 
 const initialForm: WarehouseCreateRequest = {
-  companyId: COMPANY_ID,
+  companyId: "",
   code: "",
   name: "",
   addressLine1: "",
@@ -116,6 +114,13 @@ export default function NewWarehousePage() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -123,7 +128,7 @@ export default function NewWarehousePage() {
       const warehouse =
         await createWarehouse({
           ...form,
-          companyId: COMPANY_ID,
+          companyId,
           code: form.code.trim(),
           name: form.name.trim(),
           addressLine1:
