@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -9,6 +10,10 @@ import {
   getSuppliers,
   Supplier,
 } from "@/lib/api";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
 import {
@@ -20,9 +25,6 @@ import {
   PowerIcon,
   SearchIcon,
 } from "@/components/ui/icons";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
 type DialogType = "activate" | "deactivate" | null;
 
@@ -52,6 +54,10 @@ export default function SuppliersPage() {
     message: string;
   } | null>(null);
 
+  const canCreate = hasPermission("SUPPLIER_CREATE");
+  const canUpdate = hasPermission("SUPPLIER_UPDATE");
+  const canDelete = hasPermission("SUPPLIER_DELETE");
+
   useEffect(() => {
     loadSuppliers();
   }, []);
@@ -65,7 +71,9 @@ export default function SuppliersPage() {
       setToast(null);
     }, 4000);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [toast]);
 
   async function loadSuppliers() {
@@ -73,7 +81,15 @@ export default function SuppliersPage() {
       setLoading(true);
       setError(null);
 
-      const data = await getSuppliers(COMPANY_ID);
+      const companyId = getCurrentCompanyId();
+
+      if (!companyId) {
+        throw new Error(
+          "No authenticated company was found. Please sign in again."
+        );
+      }
+
+      const data = await getSuppliers(companyId);
 
       setSuppliers(data);
     } catch (err) {
@@ -119,6 +135,24 @@ export default function SuppliersPage() {
   }, [suppliers, search, statusFilter]);
 
   function openStatusDialog(supplier: Supplier) {
+    if (supplier.active && !canDelete) {
+      setToast({
+        type: "error",
+        message:
+          "You do not have permission to deactivate suppliers.",
+      });
+      return;
+    }
+
+    if (!supplier.active && !canUpdate) {
+      setToast({
+        type: "error",
+        message:
+          "You do not have permission to activate suppliers.",
+      });
+      return;
+    }
+
     setDialogSupplier(supplier);
 
     setDialogType(
@@ -142,12 +176,47 @@ export default function SuppliersPage() {
       return;
     }
 
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setToast({
+        type: "error",
+        message:
+          "No authenticated company was found. Please sign in again.",
+      });
+      return;
+    }
+
+    if (
+      dialogType === "deactivate" &&
+      !canDelete
+    ) {
+      setToast({
+        type: "error",
+        message:
+          "You do not have permission to deactivate suppliers.",
+      });
+      return;
+    }
+
+    if (
+      dialogType === "activate" &&
+      !canUpdate
+    ) {
+      setToast({
+        type: "error",
+        message:
+          "You do not have permission to activate suppliers.",
+      });
+      return;
+    }
+
     setActionLoading(true);
 
     try {
       if (dialogType === "deactivate") {
         await deactivateSupplier(
-          COMPANY_ID,
+          companyId,
           dialogSupplier.id
         );
 
@@ -170,7 +239,7 @@ export default function SuppliersPage() {
       } else {
         const updatedSupplier =
           await activateSupplier(
-            COMPANY_ID,
+            companyId,
             dialogSupplier.id
           );
 
@@ -206,6 +275,9 @@ export default function SuppliersPage() {
   return (
     <AppShell>
       <div className="p-6 lg:p-8">
+
+        {/* PAGE HEADER */}
+
         <div className="mb-6">
           <div className="mb-1 text-xs font-medium text-ink-muted">
             Master Data / Suppliers
@@ -218,22 +290,26 @@ export default function SuppliersPage() {
               </h1>
 
               <p className="mt-1 text-sm text-ink-muted">
-                Manage suppliers used throughout NextWare.
+                Manage suppliers used throughout Nextware.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                router.push("/suppliers/new")
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              <PlusIcon />
-              New Supplier
-            </button>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push("/suppliers/new")
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+              >
+                <PlusIcon />
+                New Supplier
+              </button>
+            )}
           </div>
         </div>
+
+        {/* TOOLBAR */}
 
         <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row">
@@ -267,6 +343,8 @@ export default function SuppliersPage() {
           </div>
         </div>
 
+        {/* LOADING */}
+
         {loading && (
           <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
@@ -276,6 +354,8 @@ export default function SuppliersPage() {
             </p>
           </div>
         )}
+
+        {/* ERROR */}
 
         {!loading && error && (
           <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
@@ -305,6 +385,8 @@ export default function SuppliersPage() {
           </div>
         )}
 
+        {/* EMPTY */}
+
         {!loading &&
           !error &&
           filteredSuppliers.length === 0 && (
@@ -325,7 +407,8 @@ export default function SuppliersPage() {
               </p>
 
               {!search &&
-                statusFilter === "All Statuses" && (
+                statusFilter === "All Statuses" &&
+                canCreate && (
                   <button
                     type="button"
                     onClick={() =>
@@ -338,6 +421,8 @@ export default function SuppliersPage() {
                 )}
             </div>
           )}
+
+        {/* TABLE */}
 
         {!loading &&
           !error &&
@@ -435,33 +520,40 @@ export default function SuppliersPage() {
                                 <EyeIcon />
                               </IconButton>
 
-                              <IconButton
-                                label="Edit"
-                                onClick={() =>
-                                  router.push(
-                                    `/suppliers/view?id=${encodeURIComponent(
-                                      supplier.id
-                                    )}&edit=true`
-                                  )
-                                }
-                              >
-                                <EditIcon />
-                              </IconButton>
+                              {canUpdate && (
+                                <IconButton
+                                  label="Edit"
+                                  onClick={() =>
+                                    router.push(
+                                      `/suppliers/view?id=${encodeURIComponent(
+                                        supplier.id
+                                      )}&edit=true`
+                                    )
+                                  }
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              )}
 
-                              <IconButton
-                                label={
-                                  supplier.active
-                                    ? "Deactivate"
-                                    : "Activate"
-                                }
-                                onClick={() =>
-                                  openStatusDialog(
-                                    supplier
-                                  )
-                                }
-                              >
-                                <PowerIcon />
-                              </IconButton>
+                              {((supplier.active &&
+                                canDelete) ||
+                                (!supplier.active &&
+                                  canUpdate)) && (
+                                <IconButton
+                                  label={
+                                    supplier.active
+                                      ? "Deactivate"
+                                      : "Activate"
+                                  }
+                                  onClick={() =>
+                                    openStatusDialog(
+                                      supplier
+                                    )
+                                  }
+                                >
+                                  <PowerIcon />
+                                </IconButton>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -470,8 +562,87 @@ export default function SuppliersPage() {
                   </tbody>
                 </table>
               </div>
+
+              <div className="border-t border-line px-5 py-3 text-xs text-ink-muted">
+                Showing{" "}
+                <span className="font-semibold text-ink-secondary">
+                  {filteredSuppliers.length}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-ink-secondary">
+                  {suppliers.length}
+                </span>{" "}
+                suppliers
+              </div>
             </div>
           )}
+
+        {/* STATUS DIALOG */}
+
+        {dialogType &&
+          dialogSupplier && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-md rounded-xl border border-line bg-surface shadow-2xl">
+                <div className="flex items-center justify-between border-b border-line px-5 py-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-ink">
+                      {dialogType === "deactivate"
+                        ? "Deactivate Supplier"
+                        : "Activate Supplier"}
+                    </h2>
+
+                    <p className="mt-1 text-xs text-ink-muted">
+                      Supplier status
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={closeDialog}
+                    disabled={actionLoading}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink-secondary disabled:opacity-50"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+
+                <div className="p-5">
+                  <p className="text-sm leading-6 text-ink-secondary">
+                    {dialogType === "deactivate"
+                      ? `Are you sure you want to deactivate "${dialogSupplier.name}"? The supplier will remain in the system and can be activated again later.`
+                      : `Are you sure you want to activate "${dialogSupplier.name}"?`}
+                  </p>
+
+                  <div className="mt-5 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeDialog}
+                      disabled={actionLoading}
+                      className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-surface-hover disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={confirmStatusChange}
+                      disabled={actionLoading}
+                      className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {actionLoading
+                        ? "Processing..."
+                        : dialogType ===
+                          "deactivate"
+                        ? "Deactivate"
+                        : "Activate"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        {/* TOAST */}
 
         {toast && (
           <div className="fixed bottom-6 right-6 z-50 max-w-sm">
@@ -500,73 +671,10 @@ export default function SuppliersPage() {
                 type="button"
                 onClick={() => setToast(null)}
                 className="text-ink-muted hover:text-ink-secondary"
+                aria-label="Close notification"
               >
                 <CloseIcon />
               </button>
-            </div>
-          </div>
-        )}
-
-        {dialogType && dialogSupplier && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-ink">
-                    {dialogType === "deactivate"
-                      ? "Deactivate Supplier"
-                      : "Activate Supplier"}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    {dialogType === "deactivate"
-                      ? "This supplier will become inactive."
-                      : "This supplier will become active again."}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={closeDialog}
-                  className="text-ink-muted hover:text-ink-secondary"
-                >
-                  <CloseIcon />
-                </button>
-              </div>
-
-              <div className="mt-5 rounded-lg bg-surface-hover p-4">
-                <p className="text-sm font-semibold text-ink">
-                  {dialogSupplier.name}
-                </p>
-
-                <p className="mt-1 font-mono text-xs text-ink-muted">
-                  {dialogSupplier.supplierCode}
-                </p>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeDialog}
-                  disabled={actionLoading}
-                  className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={confirmStatusChange}
-                  disabled={actionLoading}
-                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {actionLoading
-                    ? "Processing..."
-                    : dialogType === "deactivate"
-                      ? "Deactivate"
-                      : "Activate"}
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -574,3 +682,4 @@ export default function SuppliersPage() {
     </AppShell>
   );
 }
+
