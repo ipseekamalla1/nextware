@@ -86,6 +86,18 @@ const navigation: {
         href: "/suppliers",
         permission: "SUPPLIER_VIEW",
       },
+      {
+        label: "Units of Measure",
+        icon: LayersIcon,
+        href: "/units",
+        permission: "UNIT_OF_MEASURE_VIEW",
+      },
+      {
+        label: "Company",
+        icon: SettingsIcon,
+        href: "/company",
+        permission: "COMPANY_VIEW",
+      },
     ],
   },
   {
@@ -103,6 +115,12 @@ const navigation: {
         icon: WarehouseIcon,
         href: "/warehouses",
         permission: "WAREHOUSE_VIEW",
+      },
+      {
+        label: "Warehouse Locations",
+        icon: WarehouseIcon,
+        href: "/warehouse-locations",
+        permission: "WAREHOUSE_LOCATION_VIEW",
       },
       {
         label: "Purchasing",
@@ -187,6 +205,18 @@ const pageTitles: {
   },
   {
     match: (p) =>
+      p.startsWith("/units"),
+    title: "Units of Measure",
+    description: "Unit of measure master data",
+  },
+  {
+    match: (p) =>
+      p.startsWith("/company"),
+    title: "Company",
+    description: "Company master data",
+  },
+  {
+    match: (p) =>
       p.startsWith("/inventory"),
     title: "Inventory",
     description: "Nextware ERP & WMS",
@@ -195,7 +225,13 @@ const pageTitles: {
     match: (p) =>
       p.startsWith("/warehouses"),
     title: "Warehouses",
-    description: "Nextware ERP & WMS",
+    description: "Warehouse master data",
+  },
+  {
+    match: (p) =>
+      p.startsWith("/warehouse-locations"),
+    title: "Warehouse Locations",
+    description: "Warehouse location master data",
   },
   {
     match: (p) =>
