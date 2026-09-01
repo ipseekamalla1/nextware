@@ -7,12 +7,13 @@ import {
   createSupplier,
   SupplierCreateRequest,
 } from "@/lib/api";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 
 const initialForm: SupplierCreateRequest = {
-  companyId: COMPANY_ID,
+  companyId: "",
   supplierCode: "",
   name: "",
   email: "",
@@ -150,6 +151,10 @@ export default function NewSupplierPage() {
   const [error, setError] =
     useState<string | null>(null);
 
+  const canCreate = hasPermission(
+    "SUPPLIER_CREATE"
+  );
+
   function updateField(
     field: keyof SupplierCreateRequest,
     value: string | boolean
@@ -164,6 +169,22 @@ export default function NewSupplierPage() {
     event: React.FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    if (!canCreate) {
+      setError(
+        "You do not have permission to create suppliers."
+      );
+      return;
+    }
+
+    const companyId = getCurrentCompanyId();
+
+    if (!companyId) {
+      setError(
+        "Your authenticated company could not be determined. Please sign in again."
+      );
+      return;
+    }
 
     if (!form.supplierCode.trim()) {
       setError("Supplier Code is required.");
@@ -182,7 +203,7 @@ export default function NewSupplierPage() {
       const supplier =
         await createSupplier({
           ...form,
-          companyId: COMPANY_ID,
+          companyId,
           supplierCode:
             form.supplierCode.trim(),
           name: form.name.trim(),
@@ -219,6 +240,43 @@ export default function NewSupplierPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!canCreate) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <button
+            type="button"
+            onClick={() =>
+              router.push("/suppliers")
+            }
+            className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-ink-muted transition hover:text-ink"
+          >
+            <ArrowLeftIcon />
+            Back to Suppliers
+          </button>
+
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <div className="flex items-start gap-3">
+              <div className="text-danger">
+                <AlertIcon />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-danger">
+                  Access Denied
+                </p>
+
+                <p className="mt-1 text-sm text-danger">
+                  You do not have permission to create suppliers.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   return (
@@ -361,7 +419,9 @@ export default function NewSupplierPage() {
 
               <InputField
                 label="Postal Code"
-                value={form.postalCode ?? ""}
+                value={
+                  form.postalCode ?? ""
+                }
                 onChange={(value) =>
                   updateField(
                     "postalCode",

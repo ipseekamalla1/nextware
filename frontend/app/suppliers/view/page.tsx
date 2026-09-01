@@ -1,6 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
 import {
   useRouter,
   useSearchParams,
@@ -12,10 +16,11 @@ import {
   SupplierCreateRequest,
   updateSupplier,
 } from "@/lib/api";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
 function ArrowLeftIcon() {
   return (
@@ -208,6 +213,10 @@ function SupplierViewPageContent() {
   const [saveError, setSaveError] =
     useState<string | null>(null);
 
+  const canUpdate = hasPermission(
+    "SUPPLIER_UPDATE"
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -218,12 +227,23 @@ function SupplierViewPageContent() {
         return;
       }
 
+      const companyId =
+        getCurrentCompanyId();
+
+      if (!companyId) {
+        setError(
+          "Your authenticated company could not be determined. Please sign in again."
+        );
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
         const data = await getSupplier(
-          COMPANY_ID,
+          companyId,
           supplierId
         );
 
@@ -254,7 +274,7 @@ function SupplierViewPageContent() {
   }, [supplierId]);
 
   function openEdit() {
-    if (!supplier) {
+    if (!supplier || !canUpdate) {
       return;
     }
 
@@ -297,7 +317,24 @@ function SupplierViewPageContent() {
   ) {
     event.preventDefault();
 
+    if (!canUpdate) {
+      setSaveError(
+        "You do not have permission to update suppliers."
+      );
+      return;
+    }
+
     if (!supplierId || !form) {
+      return;
+    }
+
+    const companyId =
+      getCurrentCompanyId();
+
+    if (!companyId) {
+      setSaveError(
+        "Your authenticated company could not be determined. Please sign in again."
+      );
       return;
     }
 
@@ -321,11 +358,11 @@ function SupplierViewPageContent() {
     try {
       const updated =
         await updateSupplier(
-          COMPANY_ID,
+          companyId,
           supplierId,
           {
             ...form,
-            companyId: COMPANY_ID,
+            companyId,
             supplierCode:
               form.supplierCode.trim(),
             name: form.name.trim(),
@@ -458,14 +495,16 @@ function SupplierViewPageContent() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={openEdit}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-                >
-                  <EditIcon />
-                  Edit Supplier
-                </button>
+                {canUpdate && (
+                  <button
+                    type="button"
+                    onClick={openEdit}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                  >
+                    <EditIcon />
+                    Edit Supplier
+                  </button>
+                )}
               </div>
 
               <div className="space-y-8 p-6">
@@ -579,7 +618,8 @@ function SupplierViewPageContent() {
 
         {showEdit &&
           supplier &&
-          form && (
+          form &&
+          canUpdate && (
             <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 px-4 py-8">
               <div className="mx-auto w-full max-w-4xl rounded-xl bg-surface shadow-xl">
                 <div className="flex items-center justify-between border-b border-line px-6 py-5">
@@ -672,37 +712,43 @@ function SupplierViewPageContent() {
                     </h3>
 
                     <div className="grid gap-5 md:grid-cols-2">
-                      <InputField
-                        label="Address Line 1"
-                        value={
-                          form.addressLine1 ??
-                          ""
-                        }
-                        onChange={(value) =>
-                          updateField(
-                            "addressLine1",
-                            value
-                          )
-                        }
-                      />
+                      <div className="md:col-span-2">
+                        <InputField
+                          label="Address Line 1"
+                          value={
+                            form.addressLine1 ??
+                            ""
+                          }
+                          onChange={(value) =>
+                            updateField(
+                              "addressLine1",
+                              value
+                            )
+                          }
+                        />
+                      </div>
 
-                      <InputField
-                        label="Address Line 2"
-                        value={
-                          form.addressLine2 ??
-                          ""
-                        }
-                        onChange={(value) =>
-                          updateField(
-                            "addressLine2",
-                            value
-                          )
-                        }
-                      />
+                      <div className="md:col-span-2">
+                        <InputField
+                          label="Address Line 2"
+                          value={
+                            form.addressLine2 ??
+                            ""
+                          }
+                          onChange={(value) =>
+                            updateField(
+                              "addressLine2",
+                              value
+                            )
+                          }
+                        />
+                      </div>
 
                       <InputField
                         label="City"
-                        value={form.city ?? ""}
+                        value={
+                          form.city ?? ""
+                        }
                         onChange={(value) =>
                           updateField(
                             "city",
@@ -753,6 +799,10 @@ function SupplierViewPageContent() {
                   </div>
 
                   <div>
+                    <h3 className="mb-4 text-sm font-semibold text-ink">
+                      Status
+                    </h3>
+
                     <label className="flex cursor-pointer items-center gap-3">
                       <input
                         type="checkbox"
@@ -760,15 +810,22 @@ function SupplierViewPageContent() {
                         onChange={(event) =>
                           updateField(
                             "active",
-                            event.target.checked
+                            event.target
+                              .checked
                           )
                         }
                         className="h-4 w-4 rounded border-line-strong"
                       />
 
-                      <span className="text-sm font-medium text-ink-secondary">
-                        Active supplier
-                      </span>
+                      <div>
+                        <div className="text-sm font-medium text-ink-secondary">
+                          Active supplier
+                        </div>
+
+                        <div className="text-xs text-ink-muted">
+                          Active suppliers are available for business transactions.
+                        </div>
+                      </div>
                     </label>
                   </div>
 
@@ -786,12 +843,12 @@ function SupplierViewPageContent() {
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-3 border-t border-line pt-5">
+                  <div className="flex flex-col-reverse justify-end gap-3 border-t border-line pt-5 sm:flex-row">
                     <button
                       type="button"
                       onClick={closeEdit}
                       disabled={saving}
-                      className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
+                      className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-surface-hover disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -799,10 +856,9 @@ function SupplierViewPageContent() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-50"
                     >
                       <CheckIcon />
-
                       {saving
                         ? "Saving..."
                         : "Save Changes"}
@@ -817,21 +873,23 @@ function SupplierViewPageContent() {
   );
 }
 
-function ViewPageFallback() {
-  return (
-    <AppShell>
-      <div className="p-6 lg:p-8">
-        <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
-        </div>
-      </div>
-    </AppShell>
-  );
-}
-
 export default function SupplierViewPage() {
   return (
-    <Suspense fallback={<ViewPageFallback />}>
+    <Suspense
+      fallback={
+        <AppShell>
+          <div className="p-6 lg:p-8">
+            <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
+
+              <p className="mt-4 text-sm text-ink-muted">
+                Loading supplier...
+              </p>
+            </div>
+          </div>
+        </AppShell>
+      }
+    >
       <SupplierViewPageContent />
     </Suspense>
   );
