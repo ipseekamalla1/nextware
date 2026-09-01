@@ -1,14 +1,13 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import {
-  activateCustomer,
-  Customer,
-  deactivateCustomer,
-  getCustomers,
+  activateCategory,
+  Category,
+  deactivateCategory,
+  getCategories,
 } from "@/lib/api";
 import {
   getCurrentCompanyId,
@@ -28,10 +27,10 @@ import {
 
 type DialogType = "activate" | "deactivate" | null;
 
-export default function CustomersPage() {
+export default function CategoriesPage() {
   const router = useRouter();
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
     useState("All Statuses");
@@ -43,8 +42,8 @@ export default function CustomersPage() {
   const [dialogType, setDialogType] =
     useState<DialogType>(null);
 
-  const [dialogCustomer, setDialogCustomer] =
-    useState<Customer | null>(null);
+  const [dialogCategory, setDialogCategory] =
+    useState<Category | null>(null);
 
   const [actionLoading, setActionLoading] =
     useState(false);
@@ -54,12 +53,13 @@ export default function CustomersPage() {
     message: string;
   } | null>(null);
 
-  const canCreate = hasPermission("CUSTOMER_CREATE");
-  const canUpdate = hasPermission("CUSTOMER_UPDATE");
-  const canDelete = hasPermission("CUSTOMER_DELETE");
+  const canView = hasPermission("CATEGORY_VIEW");
+  const canCreate = hasPermission("CATEGORY_CREATE");
+  const canUpdate = hasPermission("CATEGORY_UPDATE");
+  const canDelete = hasPermission("CATEGORY_DELETE");
 
   useEffect(() => {
-    loadCustomers();
+    loadCategories();
   }, []);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function CustomersPage() {
     };
   }, [toast]);
 
-  async function loadCustomers() {
+  async function loadCategories() {
     try {
       setLoading(true);
       setError(null);
@@ -89,74 +89,68 @@ export default function CustomersPage() {
         );
       }
 
-      const data = await getCustomers(companyId);
+      const data = await getCategories(companyId);
 
-      setCustomers(data);
+      setCategories(data);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to load customers."
+          : "Failed to load categories."
       );
     } finally {
       setLoading(false);
     }
   }
 
-  const filteredCustomers = useMemo(() => {
+  const filteredCategories = useMemo(() => {
     const normalizedSearch =
       search.trim().toLowerCase();
 
-    return customers.filter((customer) => {
+    return categories.filter((category) => {
       const matchesSearch =
         normalizedSearch.length === 0 ||
-        customer.customerCode
+        category.name
           .toLowerCase()
           .includes(normalizedSearch) ||
-        customer.name
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        (customer.email ?? "")
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        (customer.phone ?? "")
+        (category.description ?? "")
           .toLowerCase()
           .includes(normalizedSearch);
 
       const matchesStatus =
         statusFilter === "All Statuses" ||
         (statusFilter === "Active" &&
-          customer.active) ||
+          category.active) ||
         (statusFilter === "Inactive" &&
-          !customer.active);
+          !category.active);
 
       return matchesSearch && matchesStatus;
     });
-  }, [customers, search, statusFilter]);
+  }, [categories, search, statusFilter]);
 
-  function openStatusDialog(customer: Customer) {
-    if (customer.active && !canDelete) {
+  function openStatusDialog(category: Category) {
+    if (category.active && !canDelete) {
       setToast({
         type: "error",
         message:
-          "You do not have permission to deactivate customers.",
+          "You do not have permission to deactivate categories.",
       });
       return;
     }
 
-    if (!customer.active && !canUpdate) {
+    if (!category.active && !canUpdate) {
       setToast({
         type: "error",
         message:
-          "You do not have permission to activate customers.",
+          "You do not have permission to activate categories.",
       });
       return;
     }
 
-    setDialogCustomer(customer);
+    setDialogCategory(category);
 
     setDialogType(
-      customer.active
+      category.active
         ? "deactivate"
         : "activate"
     );
@@ -168,11 +162,11 @@ export default function CustomersPage() {
     }
 
     setDialogType(null);
-    setDialogCustomer(null);
+    setDialogCategory(null);
   }
 
   async function confirmStatusChange() {
-    if (!dialogCustomer || !dialogType) {
+    if (!dialogCategory || !dialogType) {
       return;
     }
 
@@ -194,7 +188,7 @@ export default function CustomersPage() {
       setToast({
         type: "error",
         message:
-          "You do not have permission to deactivate customers.",
+          "You do not have permission to deactivate categories.",
       });
       return;
     }
@@ -206,7 +200,7 @@ export default function CustomersPage() {
       setToast({
         type: "error",
         message:
-          "You do not have permission to activate customers.",
+          "You do not have permission to activate categories.",
       });
       return;
     }
@@ -215,46 +209,46 @@ export default function CustomersPage() {
 
     try {
       if (dialogType === "deactivate") {
-        await deactivateCustomer(
+        await deactivateCategory(
           companyId,
-          dialogCustomer.id
+          dialogCategory.id
         );
 
-        setCustomers((current) =>
-          current.map((customer) =>
-            customer.id === dialogCustomer.id
+        setCategories((current) =>
+          current.map((category) =>
+            category.id === dialogCategory.id
               ? {
-                  ...customer,
+                  ...category,
                   active: false,
                 }
-              : customer
+              : category
           )
         );
 
         setToast({
           type: "success",
           message:
-            "Customer deactivated successfully.",
+            "Category deactivated successfully.",
         });
       } else {
-        const updatedCustomer =
-          await activateCustomer(
+        const updatedCategory =
+          await activateCategory(
             companyId,
-            dialogCustomer
+            dialogCategory
           );
 
-        setCustomers((current) =>
-          current.map((customer) =>
-            customer.id === dialogCustomer.id
-              ? updatedCustomer
-              : customer
+        setCategories((current) =>
+          current.map((category) =>
+            category.id === dialogCategory.id
+              ? updatedCategory
+              : category
           )
         );
 
         setToast({
           type: "success",
           message:
-            "Customer activated successfully.",
+            "Category activated successfully.",
         });
       }
 
@@ -265,11 +259,29 @@ export default function CustomersPage() {
         message:
           err instanceof Error
             ? err.message
-            : "Failed to change customer status.",
+            : "Failed to change category status.",
       });
     } finally {
       setActionLoading(false);
     }
+  }
+
+  if (!canView) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Access denied
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              You do not have permission to view categories.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   return (
@@ -280,17 +292,17 @@ export default function CustomersPage() {
 
         <div className="mb-6">
           <div className="mb-1 text-xs font-medium text-ink-muted">
-            Master Data / Customers
+            Master Data / Categories
           </div>
 
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-ink">
-                Customers
+                Categories
               </h1>
 
               <p className="mt-1 text-sm text-ink-muted">
-                Manage customers used throughout Nextware.
+                Organize the product master data into categories.
               </p>
             </div>
 
@@ -298,12 +310,12 @@ export default function CustomersPage() {
               <button
                 type="button"
                 onClick={() =>
-                  router.push("/customers/new")
+                  router.push("/categories/new")
                 }
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
               >
                 <PlusIcon />
-                New Customer
+                New Category
               </button>
             )}
           </div>
@@ -324,7 +336,7 @@ export default function CustomersPage() {
                 onChange={(event) =>
                   setSearch(event.target.value)
                 }
-                placeholder="Search by code, name, email or phone..."
+                placeholder="Search by name or description..."
                 className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
               />
             </div>
@@ -347,10 +359,10 @@ export default function CustomersPage() {
 
         {loading && (
           <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary-600" />
 
             <p className="mt-4 text-sm text-ink-muted">
-              Loading customers...
+              Loading categories...
             </p>
           </div>
         )}
@@ -366,7 +378,7 @@ export default function CustomersPage() {
 
               <div>
                 <p className="text-sm font-semibold text-danger">
-                  Unable to load customers
+                  Unable to load categories
                 </p>
 
                 <p className="mt-1 text-sm text-danger">
@@ -375,7 +387,7 @@ export default function CustomersPage() {
 
                 <button
                   type="button"
-                  onClick={loadCustomers}
+                  onClick={loadCategories}
                   className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                 >
                   Try Again
@@ -389,21 +401,17 @@ export default function CustomersPage() {
 
         {!loading &&
           !error &&
-          filteredCustomers.length === 0 && (
+          filteredCategories.length === 0 && (
             <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-active text-xl text-ink-muted">
-                ♙
-              </div>
-
               <h2 className="mt-4 text-base font-semibold text-ink">
-                No customers found
+                No categories found
               </h2>
 
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
                 {search ||
                 statusFilter !== "All Statuses"
-                  ? "No customers match your current search or filter."
-                  : "Create your first customer to get started."}
+                  ? "No categories match your current search or filter."
+                  : "Create your first category to get started."}
               </p>
 
               {!search &&
@@ -412,11 +420,11 @@ export default function CustomersPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      router.push("/customers/new")
+                      router.push("/categories/new")
                     }
                     className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                   >
-                    Create Customer
+                    Create Category
                   </button>
                 )}
             </div>
@@ -426,26 +434,18 @@ export default function CustomersPage() {
 
         {!loading &&
           !error &&
-          filteredCustomers.length > 0 && (
+          filteredCategories.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-left">
+                <table className="w-full min-w-[720px] text-left">
                   <thead className="border-b border-line bg-surface-hover">
                     <tr>
                       <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Customer Code
+                        Name
                       </th>
 
                       <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Customer
-                      </th>
-
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Email
-                      </th>
-
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Phone
+                        Description
                       </th>
 
                       <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
@@ -459,40 +459,25 @@ export default function CustomersPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredCustomers.map(
-                      (customer) => (
+                    {filteredCategories.map(
+                      (category) => (
                         <tr
-                          key={customer.id}
+                          key={category.id}
                           className="transition hover:bg-surface-hover"
                         >
                           <td className="px-5 py-4">
-                            <span className="font-mono text-sm font-semibold text-ink">
-                              {customer.customerCode}
+                            <span className="text-sm font-semibold text-ink">
+                              {category.name}
                             </span>
                           </td>
 
-                          <td className="px-5 py-4">
-                            <div className="text-sm font-semibold text-ink">
-                              {customer.name}
-                            </div>
-
-                            <div className="mt-0.5 text-xs text-ink-muted">
-                              {customer.billingCity ||
-                                "No city provided"}
-                            </div>
-                          </td>
-
                           <td className="px-5 py-4 text-sm text-ink-secondary">
-                            {customer.email || "—"}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-ink-secondary">
-                            {customer.phone || "—"}
+                            {category.description || "—"}
                           </td>
 
                           <td className="px-5 py-4">
                             <StatusBadge
-                              active={customer.active}
+                              active={category.active}
                               className="px-3 py-1.5"
                             />
                           </td>
@@ -503,8 +488,8 @@ export default function CustomersPage() {
                                 label="View"
                                 onClick={() =>
                                   router.push(
-                                    `/customers/view?id=${encodeURIComponent(
-                                      customer.id
+                                    `/categories/view?id=${encodeURIComponent(
+                                      category.id
                                     )}`
                                   )
                                 }
@@ -517,8 +502,8 @@ export default function CustomersPage() {
                                   label="Edit"
                                   onClick={() =>
                                     router.push(
-                                      `/customers/view?id=${encodeURIComponent(
-                                        customer.id
+                                      `/categories/view?id=${encodeURIComponent(
+                                        category.id
                                       )}&edit=true`
                                     )
                                   }
@@ -527,19 +512,19 @@ export default function CustomersPage() {
                                 </IconButton>
                               )}
 
-                              {((customer.active &&
+                              {((category.active &&
                                 canDelete) ||
-                                (!customer.active &&
+                                (!category.active &&
                                   canUpdate)) && (
                                 <IconButton
                                   label={
-                                    customer.active
+                                    category.active
                                       ? "Deactivate"
                                       : "Activate"
                                   }
                                   onClick={() =>
                                     openStatusDialog(
-                                      customer
+                                      category
                                     )
                                   }
                                 >
@@ -558,13 +543,13 @@ export default function CustomersPage() {
               <div className="border-t border-line px-5 py-3 text-xs text-ink-muted">
                 Showing{" "}
                 <span className="font-semibold text-ink-secondary">
-                  {filteredCustomers.length}
+                  {filteredCategories.length}
                 </span>{" "}
                 of{" "}
                 <span className="font-semibold text-ink-secondary">
-                  {customers.length}
+                  {categories.length}
                 </span>{" "}
-                customers
+                categories
               </div>
             </div>
           )}
@@ -572,19 +557,19 @@ export default function CustomersPage() {
         {/* STATUS DIALOG */}
 
         {dialogType &&
-          dialogCustomer && (
+          dialogCategory && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
               <div className="w-full max-w-md rounded-xl border border-line bg-surface shadow-2xl">
                 <div className="flex items-center justify-between border-b border-line px-5 py-4">
                   <div>
                     <h2 className="text-base font-semibold text-ink">
                       {dialogType === "deactivate"
-                        ? "Deactivate Customer"
-                        : "Activate Customer"}
+                        ? "Deactivate Category"
+                        : "Activate Category"}
                     </h2>
 
                     <p className="mt-1 text-xs text-ink-muted">
-                      Customer status
+                      Category status
                     </p>
                   </div>
 
@@ -601,8 +586,8 @@ export default function CustomersPage() {
                 <div className="p-5">
                   <p className="text-sm leading-6 text-ink-secondary">
                     {dialogType === "deactivate"
-                      ? `Are you sure you want to deactivate "${dialogCustomer.name}"? The customer will remain in the system and can be activated again later.`
-                      : `Are you sure you want to activate "${dialogCustomer.name}"?`}
+                      ? `Are you sure you want to deactivate "${dialogCategory.name}"? The category will remain in the system and can be activated again later.`
+                      : `Are you sure you want to activate "${dialogCategory.name}"?`}
                   </p>
 
                   <div className="mt-5 flex justify-end gap-3">
@@ -655,4 +640,3 @@ export default function CustomersPage() {
     </AppShell>
   );
 }
-
