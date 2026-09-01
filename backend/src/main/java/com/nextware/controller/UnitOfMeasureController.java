@@ -33,12 +33,11 @@ public class UnitOfMeasureController {
             CompanySecurityService companySecurityService
     ) {
         this.unitOfMeasureService = unitOfMeasureService;
-        this.companySecurityService =
-                companySecurityService;
+        this.companySecurityService = companySecurityService;
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
+    @PreAuthorize("hasAuthority('UNIT_OF_MEASURE_VIEW')")
     public ResponseEntity<List<UnitOfMeasureResponse>> getUnits(
             @RequestParam UUID companyId
     ) {
@@ -54,7 +53,7 @@ public class UnitOfMeasureController {
     }
 
     @GetMapping("/{unitId}")
-    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
+    @PreAuthorize("hasAuthority('UNIT_OF_MEASURE_VIEW')")
     public ResponseEntity<UnitOfMeasureResponse> getUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId
@@ -72,7 +71,7 @@ public class UnitOfMeasureController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('PRODUCT_CREATE')")
+    @PreAuthorize("hasAuthority('UNIT_OF_MEASURE_CREATE')")
     public ResponseEntity<UnitOfMeasureResponse> createUnit(
             @Valid
             @RequestBody
@@ -92,7 +91,7 @@ public class UnitOfMeasureController {
     }
 
     @PutMapping("/{unitId}")
-    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
+    @PreAuthorize("hasAuthority('UNIT_OF_MEASURE_UPDATE')")
     public ResponseEntity<UnitOfMeasureResponse> updateUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId,
@@ -118,7 +117,7 @@ public class UnitOfMeasureController {
     }
 
     @DeleteMapping("/{unitId}")
-    @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
+    @PreAuthorize("hasAuthority('UNIT_OF_MEASURE_DELETE')")
     public ResponseEntity<Void> deactivateUnit(
             @RequestParam UUID companyId,
             @PathVariable UUID unitId

@@ -40,7 +40,7 @@ public class WarehouseLocationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('WAREHOUSE_VIEW')")
+    @PreAuthorize("hasAuthority('WAREHOUSE_LOCATION_VIEW')")
     public ResponseEntity<List<WarehouseLocationResponse>>
     getWarehouseLocations(
             @RequestParam UUID warehouseId
@@ -54,7 +54,7 @@ public class WarehouseLocationController {
     }
 
     @GetMapping("/{locationId}")
-    @PreAuthorize("hasAuthority('WAREHOUSE_VIEW')")
+    @PreAuthorize("hasAuthority('WAREHOUSE_LOCATION_VIEW')")
     public ResponseEntity<WarehouseLocationResponse>
     getWarehouseLocation(
             @RequestParam UUID warehouseId,
@@ -70,7 +70,7 @@ public class WarehouseLocationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('WAREHOUSE_CREATE')")
+    @PreAuthorize("hasAuthority('WAREHOUSE_LOCATION_CREATE')")
     public ResponseEntity<WarehouseLocationResponse>
     createWarehouseLocation(
             @Valid
@@ -88,7 +88,7 @@ public class WarehouseLocationController {
     }
 
     @PutMapping("/{locationId}")
-    @PreAuthorize("hasAuthority('WAREHOUSE_UPDATE')")
+    @PreAuthorize("hasAuthority('WAREHOUSE_LOCATION_UPDATE')")
     public ResponseEntity<WarehouseLocationResponse>
     updateWarehouseLocation(
             @RequestParam UUID warehouseId,
@@ -111,7 +111,7 @@ public class WarehouseLocationController {
      * Soft delete / deactivate warehouse location.
      */
     @DeleteMapping("/{locationId}")
-    @PreAuthorize("hasAuthority('WAREHOUSE_DELETE')")
+    @PreAuthorize("hasAuthority('WAREHOUSE_LOCATION_DELETE')")
     public ResponseEntity<Void>
     deactivateWarehouseLocation(
             @RequestParam UUID warehouseId,
@@ -132,7 +132,7 @@ public class WarehouseLocationController {
      * Activate warehouse location.
      */
     @PutMapping("/{locationId}/activate")
-    @PreAuthorize("hasAuthority('WAREHOUSE_UPDATE')")
+    @PreAuthorize("hasAuthority('WAREHOUSE_LOCATION_UPDATE')")
     public ResponseEntity<WarehouseLocationResponse>
     activateWarehouseLocation(
             @RequestParam UUID warehouseId,

@@ -7,6 +7,7 @@ import com.nextware.service.company.CompanyService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,11 +31,11 @@ public class CompanyController {
             CompanySecurityService companySecurityService
     ) {
         this.companyService = companyService;
-        this.companySecurityService =
-                companySecurityService;
+        this.companySecurityService = companySecurityService;
     }
 
     @GetMapping("/{companyId}")
+    @PreAuthorize("hasAuthority('COMPANY_VIEW')")
     public ResponseEntity<CompanyResponse> getCompany(
             @PathVariable UUID companyId
     ) {
@@ -69,6 +70,7 @@ public class CompanyController {
     }
 
     @PutMapping("/{companyId}")
+    @PreAuthorize("hasAuthority('COMPANY_UPDATE')")
     public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable UUID companyId,
             @Valid
@@ -88,6 +90,7 @@ public class CompanyController {
     }
 
     @DeleteMapping("/{companyId}")
+    @PreAuthorize("hasAuthority('COMPANY_DELETE')")
     public ResponseEntity<Void> deactivateCompany(
             @PathVariable UUID companyId
     ) {
