@@ -9,6 +9,24 @@ export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
 
+function redirectToLogin(): void {
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname !== "/login"
+  ) {
+    window.location.replace("/login");
+  }
+}
+
+function redirectToForbidden(): void {
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname !== "/403"
+  ) {
+    window.location.replace("/403");
+  }
+}
+
 export async function authFetch(
   path: string,
   options: RequestInit = {}
@@ -46,13 +64,15 @@ export async function authFetch(
 
   if (response.status === 401) {
     clearSession();
+    redirectToLogin();
 
-    if (
-      typeof window !== "undefined" &&
-      window.location.pathname !== "/login"
-    ) {
-      window.location.replace("/login");
-    }
+    return response;
+  }
+
+  if (response.status === 403) {
+    redirectToForbidden();
+
+    return response;
   }
 
   return response;

@@ -41,6 +41,7 @@ interface NavItem {
     }
   ) => React.ReactNode;
   href: string;
+  permission?: string;
   soon?: boolean;
 }
 
@@ -65,21 +66,25 @@ const navigation: {
         label: "Products",
         icon: BoxIcon,
         href: "/products",
+        permission: "PRODUCT_VIEW",
       },
       {
         label: "Categories",
         icon: TagIcon,
         href: "/categories",
+        permission: "CATEGORY_VIEW",
       },
       {
         label: "Customers",
         icon: UsersIcon,
         href: "/customers",
+        permission: "CUSTOMER_VIEW",
       },
       {
         label: "Suppliers",
         icon: TruckIcon,
         href: "/suppliers",
+        permission: "SUPPLIER_VIEW",
       },
     ],
   },
@@ -90,29 +95,34 @@ const navigation: {
         label: "Inventory",
         icon: LayersIcon,
         href: "/inventory",
+        permission: "INVENTORY_VIEW",
         soon: true,
       },
       {
         label: "Warehouses",
         icon: WarehouseIcon,
         href: "/warehouses",
+        permission: "WAREHOUSE_VIEW",
       },
       {
         label: "Purchasing",
         icon: CartDownIcon,
         href: "/purchasing",
+        permission: "PURCHASE_ORDER_CREATE",
         soon: true,
       },
       {
         label: "Sales",
         icon: CartUpIcon,
         href: "/sales",
+        permission: "SALES_ORDER_CREATE",
         soon: true,
       },
       {
         label: "Fulfillment",
         icon: PackageCheckIcon,
         href: "/fulfillment",
+        permission: "SALES_ORDER_CREATE",
         soon: true,
       },
     ],
@@ -179,43 +189,43 @@ const pageTitles: {
     match: (p) =>
       p.startsWith("/inventory"),
     title: "Inventory",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/warehouses"),
     title: "Warehouses",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/purchasing"),
     title: "Purchasing",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/sales"),
     title: "Sales",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/fulfillment"),
     title: "Fulfillment",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/reports"),
     title: "Reports",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/administration"),
     title: "Administration",
-    description: "NextWare ERP & WMS",
+    description: "Nextware ERP & WMS",
   },
 ];
 
@@ -229,7 +239,7 @@ function resolvePageMeta(
     ) ?? {
       title: "Dashboard",
       description:
-        "NextWare ERP & WMS",
+        "Nextware ERP & WMS",
     }
   );
 }
@@ -255,6 +265,7 @@ export default function AppShell({
   const {
     session,
     logout,
+    hasPermission,
   } = useAuth();
 
   const pageMeta =
@@ -285,6 +296,18 @@ export default function AppShell({
 
   function handleLogout() {
     logout();
+  }
+
+  function canSeeNavItem(
+    item: NavItem
+  ): boolean {
+    if (!item.permission) {
+      return true;
+    }
+
+    return hasPermission(
+      item.permission
+    );
   }
 
   return (
@@ -318,7 +341,7 @@ export default function AppShell({
             {!sidebarCollapsed && (
               <div>
                 <div className="text-base font-bold tracking-tight text-ink">
-                  NextWare
+                  Nextware
                 </div>
 
                 <div className="text-[10px] font-medium uppercase tracking-wider text-ink-muted">
@@ -331,108 +354,125 @@ export default function AppShell({
 
         <nav className="flex-1 overflow-y-auto px-3 py-5">
           {navigation.map(
-            (group) => (
-              <div
-                key={group.section}
-                className="mb-6"
-              >
-                {!sidebarCollapsed && (
-                  <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-                    {group.section}
-                  </div>
-                )}
+            (group) => {
+              const visibleItems =
+                group.items.filter(
+                  canSeeNavItem
+                );
 
-                <div className="space-y-1">
-                  {group.items.map(
-                    (item) => {
-                      const isActive =
-                        item.href === "/"
-                          ? pathname === "/"
-                          : pathname ===
-                              item.href ||
-                            pathname.startsWith(
-                              `${item.href}/`
-                            );
+              if (
+                visibleItems.length === 0
+              ) {
+                return null;
+              }
 
-                      const Icon =
-                        item.icon;
+              return (
+                <div
+                  key={group.section}
+                  className="mb-6"
+                >
+                  {!sidebarCollapsed && (
+                    <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                      {group.section}
+                    </div>
+                  )}
 
-                      if (
-                        item.soon
-                      ) {
+                  <div className="space-y-1">
+                    {visibleItems.map(
+                      (item) => {
+                        const isActive =
+                          item.href === "/"
+                            ? pathname === "/"
+                            : pathname ===
+                                item.href ||
+                              pathname.startsWith(
+                                `${item.href}/`
+                              );
+
+                        const Icon =
+                          item.icon;
+
+                        if (
+                          item.soon
+                        ) {
+                          return (
+                            <div
+                              key={
+                                item.label
+                              }
+                              title={
+                                sidebarCollapsed
+                                  ? `${item.label} — coming soon`
+                                  : undefined
+                              }
+                              className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted opacity-60"
+                            >
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                                <Icon />
+                              </span>
+
+                              {!sidebarCollapsed && (
+                                <>
+                                  <span className="flex-1 text-left">
+                                    {
+                                      item.label
+                                    }
+                                  </span>
+
+                                  <span className="rounded-full bg-surface-active px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+                                    Soon
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div
+                          <button
                             key={
                               item.label
                             }
+                            type="button"
+                            onClick={() => {
+                              setMobileOpen(
+                                false
+                              );
+
+                              router.push(
+                                item.href
+                              );
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                              isActive
+                                ? "bg-primary-600 text-white shadow-sm"
+                                : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
+                            }`}
                             title={
                               sidebarCollapsed
-                                ? `${item.label} — coming soon`
+                                ? item.label
                                 : undefined
                             }
-                            className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted opacity-60"
                           >
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                               <Icon />
                             </span>
 
                             {!sidebarCollapsed && (
-                              <>
-                                <span className="flex-1 text-left">
-                                  {
-                                    item.label
-                                  }
-                                </span>
-
-                                <span className="rounded-full bg-surface-active px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-                                  Soon
-                                </span>
-                              </>
+                              <span>
+                                {
+                                  item.label
+                                }
+                              </span>
                             )}
-                          </div>
+                          </button>
                         );
                       }
-
-                      return (
-                        <button
-                          key={
-                            item.label
-                          }
-                          type="button"
-                          onClick={() =>
-                            router.push(
-                              item.href
-                            )
-                          }
-                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                            isActive
-                              ? "bg-primary-600 text-white shadow-sm"
-                              : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
-                          }`}
-                          title={
-                            sidebarCollapsed
-                              ? item.label
-                              : undefined
-                          }
-                        >
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-                            <Icon />
-                          </span>
-
-                          {!sidebarCollapsed && (
-                            <span>
-                              {
-                                item.label
-                              }
-                            </span>
-                          )}
-                        </button>
-                      );
-                    }
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
+              );
+            }
           )}
         </nav>
 
@@ -538,6 +578,7 @@ export default function AppShell({
               aria-label="Search"
             >
               <SearchIcon />
+
               <span>
                 Search
               </span>
