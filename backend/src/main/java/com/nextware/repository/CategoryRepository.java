@@ -31,4 +31,8 @@ public interface CategoryRepository
             String name,
             UUID id
     );
+
+    long countByCompanyId(UUID companyId);
+
+    long countByCompanyIdAndActive(UUID companyId, boolean active);
 }

@@ -29,4 +29,8 @@ public interface UnitOfMeasureRepository
             String code,
             UUID id
     );
+
+    long countByCompanyId(UUID companyId);
+
+    long countByCompanyIdAndActive(UUID companyId, boolean active);
 }

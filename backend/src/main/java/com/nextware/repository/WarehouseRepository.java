@@ -29,4 +29,8 @@ public interface WarehouseRepository
             String code,
             UUID id
     );
+
+    long countByCompanyId(UUID companyId);
+
+    long countByCompanyIdAndActive(UUID companyId, boolean active);
 }

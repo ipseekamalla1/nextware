@@ -214,6 +214,135 @@ export async function checkBackendHealth(): Promise<string> {
 }
 
 /* =========================================================
+   DASHBOARD
+========================================================= */
+
+export interface DashboardPeriodInfo {
+  key: string;
+  label: string;
+  from: string;
+  to: string;
+}
+
+export interface DashboardCountBlock {
+  total: number;
+  active: number;
+  inactive: number;
+  addedInPeriod: number;
+}
+
+export interface DashboardCategorySlice {
+  categoryId: string | null;
+  categoryName: string;
+  count: number;
+}
+
+export interface DashboardRecentProduct {
+  id: string;
+  sku: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface DashboardProductsBlock {
+  total: number;
+  active: number;
+  inactive: number;
+  addedInPeriod: number;
+  missingCategory: number;
+  missingSellingPrice: number;
+  missingBarcode: number;
+  byCategory: DashboardCategorySlice[];
+  recent: DashboardRecentProduct[];
+}
+
+export interface DashboardWarehouseSlice {
+  warehouseId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  locationCount: number;
+}
+
+export interface DashboardWarehousesBlock {
+  total: number;
+  active: number;
+  inactive: number;
+  byWarehouse: DashboardWarehouseSlice[];
+}
+
+export interface DashboardTypeSlice {
+  type: string;
+  count: number;
+}
+
+export interface DashboardLocationsBlock {
+  total: number;
+  active: number;
+  byType: DashboardTypeSlice[];
+}
+
+export interface DashboardGrowthPoint {
+  date: string;
+  added: number;
+  cumulative: number;
+}
+
+export interface DashboardAttentionItem {
+  kind: string;
+  label: string;
+  count: number;
+  severity: "critical" | "warning" | "info";
+  href: string;
+}
+
+export interface DashboardSummary {
+  period: DashboardPeriodInfo;
+  products: DashboardProductsBlock | null;
+  categories: DashboardCountBlock | null;
+  unitsOfMeasure: DashboardCountBlock | null;
+  customers: DashboardCountBlock | null;
+  suppliers: DashboardCountBlock | null;
+  warehouses: DashboardWarehousesBlock | null;
+  warehouseLocations: DashboardLocationsBlock | null;
+  catalogGrowth: DashboardGrowthPoint[] | null;
+  needsAttention: DashboardAttentionItem[];
+  generatedAt: string;
+}
+
+export type DashboardPeriodKey =
+  | "LAST_7_DAYS"
+  | "LAST_30_DAYS"
+  | "LAST_90_DAYS"
+  | "THIS_MONTH"
+  | "THIS_QUARTER"
+  | "ALL_TIME";
+
+export async function getDashboardSummary(
+  period: DashboardPeriodKey = "LAST_30_DAYS"
+): Promise<DashboardSummary> {
+  const response = await fetch(
+    `/api/dashboard/summary?period=${encodeURIComponent(period)}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to load dashboard: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+/* =========================================================
    UNIT OF MEASURE API
 ========================================================= */
 

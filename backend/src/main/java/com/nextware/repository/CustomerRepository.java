@@ -31,4 +31,13 @@ public interface CustomerRepository
             String customerCode,
             UUID id
     );
+
+    long countByCompanyId(UUID companyId);
+
+    long countByCompanyIdAndActive(UUID companyId, boolean active);
+
+    long countByCompanyIdAndCreatedAtGreaterThanEqual(
+            UUID companyId,
+            java.time.OffsetDateTime from
+    );
 }
