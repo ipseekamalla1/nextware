@@ -128,7 +128,7 @@ export default function LoginPage() {
 
               <div>
                 <div className="text-lg font-bold tracking-tight text-white">
-                  NextWare
+                  Nextware
                 </div>
 
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">
@@ -150,12 +150,12 @@ export default function LoginPage() {
             <p className="mt-6 max-w-md text-base leading-7 text-white/75">
               Manage products, customers, suppliers,
               warehouses, inventory, purchasing,
-              sales, and fulfillment in NextWare.
+              sales, and fulfillment in Nextware.
             </p>
           </div>
 
           <div className="text-xs text-white/50">
-            NextWare ERP & WMS
+            Nextware ERP & WMS
           </div>
         </section>
 
@@ -170,7 +170,7 @@ export default function LoginPage() {
 
                 <div>
                   <div className="text-lg font-bold tracking-tight text-ink">
-                    NextWare
+                    Nextware
                   </div>
 
                   <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
@@ -186,7 +186,7 @@ export default function LoginPage() {
               </h2>
 
               <p className="mt-2 text-sm text-ink-secondary">
-                Sign in to your NextWare workspace.
+                Sign in to your Nextware workspace.
               </p>
             </div>
 
@@ -316,7 +316,7 @@ export default function LoginPage() {
 
             <div className="mt-8 border-t border-line pt-6">
               <p className="text-center text-xs text-ink-muted">
-                Authorized NextWare users only.
+                Authorized Nextware users only.
               </p>
             </div>
           </div>

@@ -1,20 +1,21 @@
-# NextWare
+# Nextware
 
 ### ERP / WMS Business Management Platform
 
-**NextWare** is a commercial-grade ERP/WMS platform designed to help small and medium-sized businesses manage inventory, warehouse operations, purchasing, sales, orders, shipping, and related business workflows from a single system.
+**Nextware** is a commercial-grade ERP/WMS platform designed to help small and medium-sized businesses manage inventory, warehouse operations, purchasing, sales, orders, shipping, and related business workflows from a single system.
 
 The product is being designed as an **installable desktop application** rather than a traditional browser-only web application. The goal is to provide businesses with software that feels like a professional operational system used every day by warehouse, office, purchasing, sales, and management teams.
 
-> **Project Status:** Phase 0 — Foundation & Blueprint
+> **Project Status:** Phase 7 — Master Data (in progress)
 > **Version:** 0.1 — Draft
 > **Started:** August 18, 2026
+> **Last Updated:** September 1, 2026
 
 ---
 
-## What is NextWare?
+## What is Nextware?
 
-NextWare is being built as a reusable ERP/WMS product rather than a one-off application for a single company.
+Nextware is being built as a reusable ERP/WMS product rather than a one-off application for a single company.
 
 The initial implementation will be driven by the real-world requirements of the first commercial client. However, the underlying architecture is being designed so that the same core product can eventually support multiple companies through configuration and company-scoped data.
 
@@ -44,7 +45,7 @@ The long-term goal is to create a flexible business platform that can grow from 
 
 # Product Goals
 
-NextWare is being designed around several core principles:
+Nextware is being designed around several core principles:
 
 * Build around real business workflows.
 * Start with a focused MVP rather than attempting to build a complete ERP immediately.
@@ -63,7 +64,7 @@ NextWare is being designed around several core principles:
 
 # Target Users
 
-NextWare is intended to support different roles within a business, including:
+Nextware is intended to support different roles within a business, including:
 
 | Role                  | Typical Responsibilities                        |
 | --------------------- | ----------------------------------------------- |
@@ -180,13 +181,13 @@ The eventual platform may include:
 
 # Architecture
 
-NextWare is planned as a **modular monolith** for the initial product.
+Nextware is planned as a **modular monolith** for the initial product.
 
 The high-level architecture is:
 
 ```text
 ┌─────────────────────────────────────────────┐
-│              NextWare Desktop               │
+│              Nextware Desktop               │
 │                                             │
 │        Tauri + React + TypeScript           │
 └──────────────────────┬──────────────────────┘
@@ -194,7 +195,7 @@ The high-level architecture is:
                        │ HTTPS / REST API
                        ▼
 ┌─────────────────────────────────────────────┐
-│              NextWare Backend               │
+│              Nextware Backend               │
 │                                             │
 │              Spring Boot API                │
 │                                             │
@@ -227,11 +228,11 @@ The intended experience is:
 ```text
 Download Installer
        ↓
-Install NextWare
+Install Nextware
        ↓
 Desktop Shortcut
        ↓
-Open NextWare
+Open Nextware
        ↓
 Login
        ↓
@@ -272,7 +273,7 @@ The application is intended to support:
 
 # Why a Desktop Application?
 
-NextWare is specifically being designed as an installed business application.
+Nextware is specifically being designed as an installed business application.
 
 This is important because warehouse and business environments may require interaction with physical equipment such as:
 
@@ -292,7 +293,7 @@ Instead:
 Employee Computer
        │
        ▼
-NextWare Desktop
+Nextware Desktop
        │
        ▼
 Secure REST API
@@ -310,7 +311,7 @@ This keeps business rules, security, authorization, transactions, and data integ
 
 # Inventory Philosophy
 
-One of the most important architectural principles of NextWare is that inventory should be treated as a **transactional ledger**, rather than simply storing one mutable quantity.
+One of the most important architectural principles of Nextware is that inventory should be treated as a **transactional ledger**, rather than simply storing one mutable quantity.
 
 Instead of relying only on:
 
@@ -347,10 +348,10 @@ This provides traceability, auditability, historical reporting, and a reliable w
 
 # Product Architecture Philosophy
 
-NextWare will initially use a **modular monolith**.
+Nextware will initially use a **modular monolith**.
 
 ```text
-NextWare
+Nextware
 │
 ├── Authentication
 ├── Users
@@ -376,14 +377,14 @@ Microservices are intentionally **not** part of the initial architecture because
 
 # Multi-Client Product Vision
 
-NextWare is being developed with a long-term productization strategy.
+Nextware is being developed with a long-term productization strategy.
 
 The objective is to avoid creating a codebase that only works for one company.
 
 Conceptually:
 
 ```text
-                 NextWare Core
+                 Nextware Core
                       │
         ┌─────────────┼─────────────┐
         │             │             │
@@ -402,7 +403,7 @@ The first client will therefore act as the initial real-world validation of the 
 
 # Development Roadmap
 
-NextWare is being developed in phases.
+Nextware is being developed in phases.
 
 | Phase | Description              | Status     |
 | ----- | ------------------------ | ---------- |
@@ -563,7 +564,7 @@ The exact structure will be finalized during the Project Setup and Architecture 
 
 > **Build the smallest useful system first.**
 
-NextWare is intentionally not attempting to build every ERP feature at once.
+Nextware is intentionally not attempting to build every ERP feature at once.
 
 The project will follow:
 
@@ -613,7 +614,7 @@ License and commercial distribution terms will be determined as the product appr
 
 ## Project
 
-**Project Name:** NextWare
+**Project Name:** Nextware
 **Product Type:** ERP / WMS Platform
 **Architecture:** Desktop Client + REST API + PostgreSQL
 **Desktop:** Tauri + React + TypeScript

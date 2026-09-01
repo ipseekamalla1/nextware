@@ -22,7 +22,7 @@ export default function HealthPage() {
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="rounded-lg border p-8">
         <h1 className="mb-4 text-2xl font-bold">
-          NextWare Backend Connection
+          Nextware Backend Connection
         </h1>
 
         {error ? (

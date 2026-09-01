@@ -238,7 +238,7 @@ export default function CustomersPage() {
               </h1>
 
               <p className="mt-1 text-sm text-ink-muted">
-                Manage customers used throughout NextWare.
+                Manage customers used throughout Nextware.
               </p>
             </div>
 

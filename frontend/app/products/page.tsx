@@ -553,7 +553,7 @@ return (
           <p className="mt-1 text-xs text-ink-muted">
             {isEdit
               ? "Update the product master information."
-              : "Create a product in the NextWare product master."}
+              : "Create a product in the Nextware product master."}
           </p>
         </div>
 
@@ -952,7 +952,7 @@ Master Data / Products </div>
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary-600" />
 
           <p className="mt-4 text-sm text-ink-muted">
-            Loading products from NextWare...
+            Loading products from Nextware...
           </p>
         </div>
       )}

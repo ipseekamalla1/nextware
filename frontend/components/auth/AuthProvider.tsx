@@ -154,7 +154,7 @@ export function AuthProvider({
           </div>
 
           <p className="text-sm font-medium text-ink">
-            Loading NextWare...
+            Loading Nextware...
           </p>
 
           <p className="mt-1 text-xs text-ink-muted">

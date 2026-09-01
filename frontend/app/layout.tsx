@@ -3,9 +3,9 @@ import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "NextWare",
+  title: "Nextware",
   description:
-    "NextWare ERP & Warehouse Management System",
+    "Nextware ERP & Warehouse Management System",
 };
 
 const themeInitScript = `
