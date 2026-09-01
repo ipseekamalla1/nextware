@@ -1,8 +1,6 @@
 "use client";
 
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 import {
   useRouter,
   useSearchParams,
@@ -12,6 +10,10 @@ import {
   createWarehouseLocation,
   WarehouseLocationCreateRequest,
 } from "@/lib/api";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 
 const LOCATION_TYPES = [
   "RECEIVING",
@@ -96,6 +98,11 @@ export default function NewWarehouseLocationPage() {
       "warehouseId"
     ) || "";
 
+  const canCreate =
+    hasPermission(
+      "WAREHOUSE_LOCATION_CREATE"
+    );
+
   const [form, setForm] =
     useState<WarehouseLocationCreateRequest>(
       {
@@ -131,9 +138,27 @@ export default function NewWarehouseLocationPage() {
   ) {
     event.preventDefault();
 
+    if (!canCreate) {
+      router.push("/403");
+      return;
+    }
+
     if (!warehouseId) {
       setError(
         "Warehouse ID is required."
+      );
+      return;
+    }
+
+    const currentCompanyId =
+      getCurrentCompanyId();
+
+    if (
+      typeof currentCompanyId !== "string" ||
+      currentCompanyId.trim() === ""
+    ) {
+      setError(
+        "Your authenticated company could not be determined. Please sign in again."
       );
       return;
     }
@@ -157,19 +182,17 @@ export default function NewWarehouseLocationPage() {
       setError(null);
 
       const location =
-        await createWarehouseLocation(
-          {
-            warehouseId,
-            code: form.code.trim(),
-            name:
-              form.name?.trim() ||
-              null,
-            locationType:
-              form.locationType,
-            active:
-              form.active,
-          }
-        );
+        await createWarehouseLocation({
+          warehouseId,
+          code: form.code.trim(),
+          name:
+            form.name?.trim() ||
+            null,
+          locationType:
+            form.locationType,
+          active:
+            form.active,
+        });
 
       router.push(
         `/warehouse-locations/view?id=${encodeURIComponent(
@@ -187,6 +210,24 @@ export default function NewWarehouseLocationPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!canCreate) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Access denied
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              You do not have permission to create warehouse locations.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   return (

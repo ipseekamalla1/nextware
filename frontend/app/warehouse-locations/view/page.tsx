@@ -1,50 +1,54 @@
+
 "use client";
 
 import {
   Suspense,
   useEffect,
+  useMemo,
   useState,
 } from "react";
-import {
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 import {
   getWarehouseLocation,
   updateWarehouseLocation,
   WarehouseLocation,
   WarehouseLocationCreateRequest,
 } from "@/lib/api";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 
-const LOCATION_TYPES = [
-  "RECEIVING",
-  "STORAGE",
-  "PICKING",
-  "PACKING",
-  "SHIPPING",
-  "QUARANTINE",
-  "DAMAGED",
-];
+function requireCompanyId(): string {
+  const companyId = getCurrentCompanyId();
+
+  if (
+    typeof companyId !== "string" ||
+    companyId.trim() === ""
+  ) {
+    throw new Error(
+      "Company context is unavailable. Please sign in again."
+    );
+  }
+
+  return companyId;
+}
 
 function DisplayField({
   label,
   value,
 }: {
   label: string;
-  value:
-    | string
-    | null
-    | undefined;
+  value: string | null;
 }) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
         {label}
       </p>
 
-      <p className="mt-1.5 text-sm text-ink-secondary">
+      <p className="mt-1 text-sm text-slate-900">
         {value || "—"}
       </p>
     </div>
@@ -56,126 +60,104 @@ function InputField({
   value,
   onChange,
   required = false,
+  disabled = false,
 }: {
   label: string;
   value: string;
-  onChange: (
-    value: string
-  ) => void;
+  onChange: (value: string) => void;
   required?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-muted">
+      <label className="block text-sm font-medium text-slate-700">
         {label}
 
         {required && (
-          <span className="text-danger">
-            {" "}
-            *
-          </span>
+          <span className="ml-1 text-red-500">*</span>
         )}
       </label>
 
       <input
+        type="text"
         value={value}
         onChange={(event) =>
-          onChange(
-            event.target.value
-          )
+          onChange(event.target.value)
         }
-        required={required}
-        className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-primary-400"
+        disabled={disabled}
+        className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
       />
     </div>
   );
 }
 
-function toForm(
-  location: WarehouseLocation
-): WarehouseLocationCreateRequest {
+function toForm(location: WarehouseLocation) {
   return {
-    warehouseId:
-      location.warehouseId,
-    code: location.code,
-    name: location.name,
+    code: location.code ?? "",
+    name: location.name ?? "",
     locationType:
-      location.locationType,
-    active: location.active,
+      location.locationType ?? "STORAGE",
+    active: location.active ?? true,
   };
 }
 
-function WarehouseLocationViewContent() {
+function WarehouseLocationViewPageContent() {
   const router = useRouter();
-  const searchParams =
-    useSearchParams();
+  const searchParams = useSearchParams();
 
-  const locationId =
-    searchParams.get("id");
-
+  const locationId = searchParams.get("id");
   const warehouseId =
-    searchParams.get(
-      "warehouseId"
-    );
+    searchParams.get("warehouseId");
+  const editParam =
+    searchParams.get("edit") === "true";
 
-  const editFromQuery =
-    searchParams.get(
-      "edit"
-    ) === "true";
+  const [location, setLocation] =
+    useState<WarehouseLocation | null>(null);
 
-  const [
-    location,
-    setLocation,
-  ] =
-    useState<WarehouseLocation | null>(
-      null
-    );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const [form, setForm] =
-    useState<WarehouseLocationCreateRequest | null>(
-      null
-    );
+  const [editOpen, setEditOpen] =
+    useState(editParam);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [form, setForm] = useState({
+    code: "",
+    name: "",
+    locationType: "STORAGE",
+    active: true,
+  });
 
-  const [saving, setSaving] =
-    useState(false);
+  const canView = useMemo(
+    () =>
+      hasPermission(
+        "WAREHOUSE_LOCATION_VIEW"
+      ),
+    []
+  );
 
-  const [showEdit, setShowEdit] =
-    useState(editFromQuery);
-
-  const [error, setError] =
-    useState<string | null>(
-      null
-    );
-
-  const [saveError, setSaveError] =
-    useState<string | null>(
-      null
-    );
+  const canUpdate = useMemo(
+    () =>
+      hasPermission(
+        "WAREHOUSE_LOCATION_UPDATE"
+      ),
+    []
+  );
 
   useEffect(() => {
-    async function load() {
-      if (!locationId) {
-        setError(
-          "Location ID is missing."
-        );
-        setLoading(false);
-        return;
-      }
+    if (
+      !canView ||
+      !warehouseId ||
+      !locationId
+    ) {
+      return;
+    }
 
-      if (!warehouseId) {
-        setError(
-          "Warehouse ID is missing."
-        );
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
 
+    const load = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        requireCompanyId();
 
         const data =
           await getWarehouseLocation(
@@ -183,120 +165,76 @@ function WarehouseLocationViewContent() {
             locationId
           );
 
+        if (cancelled) {
+          return;
+        }
+
         setLocation(data);
         setForm(toForm(data));
+        setError("");
+        setLoading(false);
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
         setError(
           err instanceof Error
             ? err.message
             : "Failed to load warehouse location."
         );
-      } finally {
+
         setLoading(false);
       }
-    }
+    };
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
-    locationId,
+    canView,
     warehouseId,
+    locationId,
   ]);
 
-  function updateField(
-    field: keyof WarehouseLocationCreateRequest,
-    value: string | boolean
-  ) {
-    setForm((current) =>
-      current
-        ? {
-            ...current,
-            [field]: value,
-          }
-        : current
-    );
-  }
-
-  function openEdit() {
-    if (!location) {
-      return;
-    }
-
-    setForm(toForm(location));
-    setSaveError(null);
-    setShowEdit(true);
-  }
-
-  function closeEdit() {
-    if (saving) {
-      return;
-    }
-
-    setShowEdit(false);
-    setSaveError(null);
-
-    if (location) {
-      setForm(
-        toForm(location)
-      );
-    }
-  }
-
-  async function handleSave(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
-
+  const handleSave = async () => {
     if (
-      !locationId ||
       !warehouseId ||
-      !form
+      !locationId ||
+      !canUpdate
     ) {
       return;
     }
 
-    if (!form.code.trim()) {
-      setSaveError(
-        "Location Code is required."
-      );
-      return;
-    }
-
-    if (!form.locationType) {
-      setSaveError(
-        "Location Type is required."
-      );
-      return;
-    }
-
     try {
+      requireCompanyId();
+
       setSaving(true);
-      setSaveError(null);
+      setError("");
+
+      const request: WarehouseLocationCreateRequest =
+        {
+          warehouseId,
+          code: form.code.trim(),
+          name: form.name.trim() || null,
+          locationType: form.locationType,
+          active: form.active,
+        };
 
       const updated =
         await updateWarehouseLocation(
           warehouseId,
           locationId,
-          {
-            warehouseId,
-            code:
-              form.code.trim(),
-            name:
-              form.name?.trim() ||
-              null,
-            locationType:
-              form.locationType,
-            active:
-              form.active,
-          }
+          request
         );
 
       setLocation(updated);
-      setForm(
-        toForm(updated)
-      );
-      setShowEdit(false);
+      setForm(toForm(updated));
+      setEditOpen(false);
     } catch (err) {
-      setSaveError(
+      setError(
         err instanceof Error
           ? err.message
           : "Failed to update warehouse location."
@@ -304,382 +242,393 @@ function WarehouseLocationViewContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  if (!canView) {
+    return (
+      <AppShell>
+        <div className="p-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-lg font-semibold text-slate-900">
+              Access Denied
+            </h1>
+
+            <p className="mt-2 text-sm text-slate-500">
+              You do not have permission to view
+              warehouse locations.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!warehouseId || !locationId) {
+    return (
+      <AppShell>
+        <div className="p-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-lg font-semibold text-slate-900">
+              Invalid Warehouse Location
+            </h1>
+
+            <p className="mt-2 text-sm text-slate-500">
+              The warehouse location information
+              is missing.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   return (
     <AppShell>
-      <div className="p-6 lg:p-8">
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={() =>
-              router.push(
-                `/warehouse-locations?warehouseId=${encodeURIComponent(
-                  warehouseId || ""
-                )}`
-              )
-            }
-            className="mb-5 text-sm font-medium text-ink-muted hover:text-ink"
-          >
-            ← Back to Locations
-          </button>
-
-          <div className="mb-1 text-xs font-medium text-ink-muted">
-            Master Data / Warehouse Locations / View
-          </div>
-
-          <h1 className="text-2xl font-bold tracking-tight text-ink">
-            Warehouse Location Details
-          </h1>
-
-          <p className="mt-1 text-sm text-ink-muted">
-            View and manage warehouse location information.
-          </p>
-        </div>
-
-        {loading && (
-          <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
-
-            <p className="mt-4 text-sm text-ink-muted">
-              Loading warehouse location...
-            </p>
-          </div>
-        )}
-
-        {!loading &&
-          error && (
-            <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10 text-danger">
-              <p className="text-sm font-semibold">
-                Unable to load warehouse location
-              </p>
-
-              <p className="mt-1 text-sm">
-                {error}
-              </p>
-
+      <div className="p-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
               <button
                 type="button"
                 onClick={() =>
                   router.push(
                     `/warehouse-locations?warehouseId=${encodeURIComponent(
-                      warehouseId || ""
+                      warehouseId
                     )}`
                   )
                 }
-                className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                className="mb-3 text-sm font-medium text-slate-600 hover:text-slate-900"
               >
-                Back to Locations
+                ← Back to Locations
               </button>
+
+              <h1 className="text-2xl font-semibold text-slate-900">
+                Warehouse Location
+              </h1>
+
+              <p className="mt-1 text-sm text-slate-500">
+                View warehouse location details.
+              </p>
             </div>
-          )}
 
-        {!loading &&
-          !error &&
-          location && (
-            <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-              <div className="flex flex-col justify-between gap-4 border-b border-line px-6 py-5 sm:flex-row sm:items-center">
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-lg font-semibold text-ink">
-                      {location.name ||
-                        location.code}
-                    </h2>
-
-                    <StatusBadge
-                      active={
-                        location.active
-                      }
-                      className="px-3 py-1.5"
-                    />
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="font-mono text-sm text-ink-muted">
-                      {location.code}
-                    </span>
-
-                    <span className="text-ink-muted">
-                      •
-                    </span>
-
-                    <span className="text-sm text-ink-muted">
-                      {
-                        location.locationType
-                      }
-                    </span>
-                  </div>
-                </div>
-
+            {location &&
+              canUpdate &&
+              !editOpen && (
                 <button
                   type="button"
-                  onClick={openEdit}
-                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                  onClick={() =>
+                    setEditOpen(true)
+                  }
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
                 >
                   Edit Location
                 </button>
+              )}
+          </div>
+
+          {error && (
+            <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-sm text-slate-500">
+                Loading warehouse location...
+              </p>
+            </div>
+          ) : !location ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Warehouse location not found
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-500">
+                The requested warehouse location
+                could not be found.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900">
+                      Location Information
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Basic information about this
+                      warehouse location.
+                    </p>
+                  </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      location.active
+                        ? "bg-green-100 text-green-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {location.active
+                      ? "Active"
+                      : "Inactive"}
+                  </span>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <DisplayField
+                    label="Code"
+                    value={location.code}
+                  />
+
+                  <DisplayField
+                    label="Name"
+                    value={location.name}
+                  />
+
+                  <DisplayField
+                    label="Location Type"
+                    value={
+                      location.locationType
+                    }
+                  />
+
+                  <DisplayField
+                    label="Status"
+                    value={
+                      location.active
+                        ? "Active"
+                        : "Inactive"
+                    }
+                  />
+                </div>
               </div>
 
-              <div className="space-y-8 p-6">
-                <section>
-                  <h3 className="mb-5 border-b border-line pb-3 text-base font-semibold text-ink">
-                    Location Information
-                  </h3>
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Warehouse
+                </h2>
 
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <DisplayField
-                      label="Location Code"
-                      value={
-                        location.code
-                      }
-                    />
+                <p className="mt-1 text-sm text-slate-500">
+                  Warehouse associated with this
+                  location.
+                </p>
 
-                    <DisplayField
-                      label="Location Name"
-                      value={
-                        location.name
-                      }
-                    />
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <DisplayField
+                    label="Warehouse ID"
+                    value={location.warehouseId}
+                  />
+                </div>
+              </div>
 
-                    <DisplayField
-                      label="Location Type"
-                      value={
-                        location.locationType
-                      }
-                    />
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Record Information
+                </h2>
 
-                    <DisplayField
-                      label="Status"
-                      value={
-                        location.active
-                          ? "Active"
-                          : "Inactive"
-                      }
-                    />
-                  </div>
-                </section>
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <DisplayField
+                    label="Location ID"
+                    value={location.id}
+                  />
 
-                <section>
-                  <h3 className="mb-5 border-b border-line pb-3 text-base font-semibold text-ink">
-                    Warehouse
-                  </h3>
+                  <DisplayField
+                    label="Created At"
+                    value={
+                      location.createdAt
+                        ? new Date(
+                            location.createdAt
+                          ).toLocaleString()
+                        : null
+                    }
+                  />
 
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <DisplayField
-                      label="Warehouse ID"
-                      value={
-                        location.warehouseId
-                      }
-                    />
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="mb-5 border-b border-line pb-3 text-base font-semibold text-ink">
-                    Record Information
-                  </h3>
-
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <DisplayField
-                      label="Created"
-                      value={
-                        location.createdAt
-                          ? new Date(
-                              location.createdAt
-                            ).toLocaleString()
-                          : null
-                      }
-                    />
-
-                    <DisplayField
-                      label="Last Updated"
-                      value={
-                        location.updatedAt
-                          ? new Date(
-                              location.updatedAt
-                            ).toLocaleString()
-                          : null
-                      }
-                    />
-                  </div>
-                </section>
+                  <DisplayField
+                    label="Updated At"
+                    value={
+                      location.updatedAt
+                        ? new Date(
+                            location.updatedAt
+                          ).toLocaleString()
+                        : null
+                    }
+                  />
+                </div>
               </div>
             </div>
           )}
 
-        {showEdit &&
-          location &&
-          form && (
-            <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 px-4 py-8">
-              <div className="mx-auto w-full max-w-2xl rounded-xl bg-surface shadow-xl">
-                <div className="flex items-center justify-between border-b border-line px-6 py-5">
-                  <div>
-                    <h2 className="text-lg font-semibold text-ink">
-                      Edit Warehouse Location
+          {editOpen &&
+            location &&
+            canUpdate && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+                  <div className="border-b border-slate-200 px-6 py-4">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Edit Location
                     </h2>
 
-                    <p className="mt-1 text-sm text-ink-muted">
-                      Update location information.
+                    <p className="mt-1 text-sm text-slate-500">
+                      Update warehouse location
+                      information.
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={
-                      closeEdit
-                    }
-                    disabled={saving}
-                    className="text-2xl text-ink-muted hover:text-ink disabled:opacity-50"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <form
-                  onSubmit={handleSave}
-                  className="space-y-6 p-6"
-                >
-                  <div className="grid gap-5 md:grid-cols-2">
+                  <div className="space-y-5 px-6 py-5">
                     <InputField
-                      label="Location Code"
-                      value={
-                        form.code
-                      }
-                      onChange={(
-                        value
-                      ) =>
-                        updateField(
-                          "code",
-                          value
+                      label="Code"
+                      value={form.code}
+                      onChange={(value) =>
+                        setForm(
+                          (current) => ({
+                            ...current,
+                            code: value,
+                          })
                         )
                       }
                       required
                     />
 
                     <InputField
-                      label="Location Name"
-                      value={
-                        form.name ??
-                        ""
-                      }
-                      onChange={(
-                        value
-                      ) =>
-                        updateField(
-                          "name",
-                          value
+                      label="Name"
+                      value={form.name}
+                      onChange={(value) =>
+                        setForm(
+                          (current) => ({
+                            ...current,
+                            name: value,
+                          })
                         )
                       }
                     />
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-muted">
+                      <label className="block text-sm font-medium text-slate-700">
                         Location Type
-                        <span className="text-danger">
-                          {" "}
-                          *
-                        </span>
                       </label>
 
                       <select
                         value={
                           form.locationType
                         }
-                        onChange={(
-                          event
-                        ) =>
-                          updateField(
-                            "locationType",
-                            event
-                              .target
-                              .value
+                        onChange={(event) =>
+                          setForm(
+                            (current) => ({
+                              ...current,
+                              locationType:
+                                event.target
+                                  .value,
+                            })
                           )
                         }
-                        className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary-400"
-                        required
+                        className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                       >
-                        {LOCATION_TYPES.map(
-                          (
-                            type
-                          ) => (
-                            <option
-                              key={
-                                type
-                              }
-                              value={
-                                type
-                              }
-                            >
-                              {
-                                type
-                              }
-                            </option>
-                          )
-                        )}
+                        <option value="RECEIVING">
+                          Receiving
+                        </option>
+
+                        <option value="STORAGE">
+                          Storage
+                        </option>
+
+                        <option value="PICKING">
+                          Picking
+                        </option>
+
+                        <option value="PACKING">
+                          Packing
+                        </option>
+
+                        <option value="SHIPPING">
+                          Shipping
+                        </option>
+
+                        <option value="QUARANTINE">
+                          Quarantine
+                        </option>
+
+                        <option value="DAMAGED">
+                          Damaged
+                        </option>
                       </select>
                     </div>
 
-                    <label className="flex items-center gap-3 self-end pb-2">
+                    <label className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={
-                          form.active
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          updateField(
-                            "active",
-                            event
-                              .target
-                              .checked
+                        checked={form.active}
+                        onChange={(event) =>
+                          setForm(
+                            (current) => ({
+                              ...current,
+                              active:
+                                event.target
+                                  .checked,
+                            })
                           )
                         }
-                        className="h-4 w-4 rounded border-line-strong"
+                        className="h-4 w-4 rounded border-slate-300"
                       />
 
-                      <span className="text-sm font-medium text-ink-secondary">
-                        Active location
+                      <span className="text-sm font-medium text-slate-700">
+                        Active
                       </span>
                     </label>
                   </div>
 
-                  {saveError && (
-                    <div className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
-                      {saveError}
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-3">
+                  <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
                     <button
                       type="button"
-                      onClick={
-                        closeEdit
+                      onClick={() =>
+                        setEditOpen(false)
                       }
-                      disabled={
-                        saving
-                      }
-                      className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:opacity-50"
+                      disabled={saving}
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Cancel
                     </button>
 
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleSave}
                       disabled={
-                        saving
+                        saving ||
+                        !form.code.trim()
                       }
-                      className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+                      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {saving
                         ? "Saving..."
                         : "Save Changes"}
                     </button>
                   </div>
-                </form>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+        </div>
       </div>
     </AppShell>
   );
@@ -690,13 +639,18 @@ export default function WarehouseLocationViewPage() {
     <Suspense
       fallback={
         <AppShell>
-          <div className="p-8 text-sm text-ink-muted">
-            Loading warehouse location...
+          <div className="p-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-sm text-slate-500">
+                Loading warehouse location...
+              </p>
+            </div>
           </div>
         </AppShell>
       }
     >
-      <WarehouseLocationViewContent />
+      <WarehouseLocationViewPageContent />
     </Suspense>
   );
 }
+

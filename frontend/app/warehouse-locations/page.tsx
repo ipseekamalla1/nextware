@@ -9,6 +9,7 @@ import {
   getWarehouseLocations,
   WarehouseLocation,
 } from "@/lib/api";
+import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
 import {
@@ -37,6 +38,11 @@ export default function WarehouseLocationsPage() {
 
   const warehouseId = searchParams.get("warehouseId");
 
+  const canView = hasPermission("WAREHOUSE_LOCATION_VIEW");
+  const canCreate = hasPermission("WAREHOUSE_LOCATION_CREATE");
+  const canUpdate = hasPermission("WAREHOUSE_LOCATION_UPDATE");
+  const canDelete = hasPermission("WAREHOUSE_LOCATION_DELETE");
+
   const [locations, setLocations] = useState<WarehouseLocation[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All Types");
@@ -59,16 +65,67 @@ export default function WarehouseLocationsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!warehouseId) {
-      setError(
-        "Warehouse ID is missing. Please open Warehouse Locations from a warehouse."
-      );
-      setLoading(false);
+    if (!canView) {
       return;
     }
 
-    loadLocations();
-  }, [warehouseId]);
+    if (!warehouseId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError(null);
+        }
+
+        const currentCompanyId = getCurrentCompanyId();
+
+        if (
+          typeof currentCompanyId !== "string" ||
+          currentCompanyId.trim() === ""
+        ) {
+          if (!cancelled) {
+            setError(
+              "Your authenticated company could not be determined. Please sign in again."
+            );
+            setLoading(false);
+          }
+
+          return;
+        }
+
+        const data = await getWarehouseLocations(
+          warehouseId
+        );
+
+        if (!cancelled) {
+          setLocations(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load warehouse locations."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [warehouseId, canView]);
 
   useEffect(() => {
     if (!toast) {
@@ -83,31 +140,6 @@ export default function WarehouseLocationsPage() {
       window.clearTimeout(timer);
     };
   }, [toast]);
-
-  async function loadLocations() {
-    if (!warehouseId) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const data = await getWarehouseLocations(
-        warehouseId
-      );
-
-      setLocations(data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load warehouse locations."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const filteredLocations = useMemo(() => {
     const normalizedSearch =
@@ -153,6 +185,10 @@ export default function WarehouseLocationsPage() {
   function openStatusDialog(
     location: WarehouseLocation
   ) {
+    if (!canDelete) {
+      return;
+    }
+
     setDialogLocation(location);
 
     setDialogType(
@@ -175,8 +211,24 @@ export default function WarehouseLocationsPage() {
     if (
       !dialogLocation ||
       !dialogType ||
-      !warehouseId
+      !warehouseId ||
+      !canDelete
     ) {
+      return;
+    }
+
+    const currentCompanyId =
+      getCurrentCompanyId();
+
+    if (
+      typeof currentCompanyId !== "string" ||
+      currentCompanyId.trim() === ""
+    ) {
+      setToast({
+        type: "error",
+        message:
+          "Your authenticated company could not be determined. Please sign in again.",
+      });
       return;
     }
 
@@ -250,6 +302,11 @@ export default function WarehouseLocationsPage() {
       return;
     }
 
+    if (!canCreate) {
+      router.push("/403");
+      return;
+    }
+
     router.push(
       `/warehouse-locations/new?warehouseId=${encodeURIComponent(
         warehouseId
@@ -259,6 +316,11 @@ export default function WarehouseLocationsPage() {
 
   function openView(locationId: string) {
     if (!warehouseId) {
+      return;
+    }
+
+    if (!canView) {
+      router.push("/403");
       return;
     }
 
@@ -276,12 +338,35 @@ export default function WarehouseLocationsPage() {
       return;
     }
 
+    if (!canUpdate) {
+      router.push("/403");
+      return;
+    }
+
     router.push(
       `/warehouse-locations/view?id=${encodeURIComponent(
         locationId
       )}&warehouseId=${encodeURIComponent(
         warehouseId
       )}&edit=true`
+    );
+  }
+
+  if (!canView) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Access denied
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              You do not have permission to view warehouse locations.
+            </p>
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
@@ -315,15 +400,17 @@ export default function WarehouseLocationsPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={openNewLocation}
-              disabled={!warehouseId}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <PlusIcon />
-              New Location
-            </button>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={openNewLocation}
+                disabled={!warehouseId}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <PlusIcon />
+                New Location
+              </button>
+            )}
           </div>
         </div>
 
@@ -451,7 +538,8 @@ export default function WarehouseLocationsPage() {
                 typeFilter ===
                   "All Types" &&
                 statusFilter ===
-                  "All Statuses" && (
+                  "All Statuses" &&
+                canCreate && (
                   <button
                     type="button"
                     onClick={
@@ -534,42 +622,48 @@ export default function WarehouseLocationsPage() {
 
                           <td className="px-5 py-4">
                             <div className="flex justify-end gap-2">
-                              <IconButton
-                                label="View"
-                                onClick={() =>
-                                  openView(
-                                    location.id
-                                  )
-                                }
-                              >
-                                <EyeIcon />
-                              </IconButton>
+                              {canView && (
+                                <IconButton
+                                  label="View"
+                                  onClick={() =>
+                                    openView(
+                                      location.id
+                                    )
+                                  }
+                                >
+                                  <EyeIcon />
+                                </IconButton>
+                              )}
 
-                              <IconButton
-                                label="Edit"
-                                onClick={() =>
-                                  openEdit(
-                                    location.id
-                                  )
-                                }
-                              >
-                                <EditIcon />
-                              </IconButton>
+                              {canUpdate && (
+                                <IconButton
+                                  label="Edit"
+                                  onClick={() =>
+                                    openEdit(
+                                      location.id
+                                    )
+                                  }
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              )}
 
-                              <IconButton
-                                label={
-                                  location.active
-                                    ? "Deactivate"
-                                    : "Activate"
-                                }
-                                onClick={() =>
-                                  openStatusDialog(
-                                    location
-                                  )
-                                }
-                              >
-                                <PowerIcon />
-                              </IconButton>
+                              {canDelete && (
+                                <IconButton
+                                  label={
+                                    location.active
+                                      ? "Deactivate"
+                                      : "Activate"
+                                  }
+                                  onClick={() =>
+                                    openStatusDialog(
+                                      location
+                                    )
+                                  }
+                                >
+                                  <PowerIcon />
+                                </IconButton>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -582,7 +676,8 @@ export default function WarehouseLocationsPage() {
           )}
 
         {dialogType &&
-          dialogLocation && (
+          dialogLocation &&
+          canDelete && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
               <div className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl">
                 <h2 className="text-lg font-semibold text-ink">

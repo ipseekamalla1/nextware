@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -16,10 +17,11 @@ import {
   Warehouse,
   WarehouseCreateRequest,
 } from "@/lib/api";
+import {
+  getCurrentCompanyId,
+  hasPermission,
+} from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-
-const COMPANY_ID =
-  "7178d6f9-7df6-4beb-ab9c-a5d3a9b21824";
 
 function DisplayField({
   label,
@@ -68,10 +70,11 @@ function InputField({
 }
 
 function toForm(
-  warehouse: Warehouse
+  warehouse: Warehouse,
+  companyId: string
 ): WarehouseCreateRequest {
   return {
-    companyId: warehouse.companyId,
+    companyId,
     code: warehouse.code,
     name: warehouse.name,
     addressLine1: warehouse.addressLine1,
@@ -88,8 +91,10 @@ function WarehouseViewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const warehouseId =
-    searchParams.get("id");
+  const canView = hasPermission("WAREHOUSE_VIEW");
+  const canUpdate = hasPermission("WAREHOUSE_UPDATE");
+
+  const warehouseId = searchParams.get("id");
 
   const editFromQuery =
     searchParams.get("edit") === "true";
@@ -118,12 +123,29 @@ function WarehouseViewContent() {
     useState<string | null>(null);
 
   useEffect(() => {
+    if (!canView || !warehouseId) {
+      return;
+    }
+
+    const currentWarehouseId = warehouseId;
+
+    let cancelled = false;
+
     async function load() {
-      if (!warehouseId) {
-        setError(
-          "Warehouse ID is missing."
-        );
-        setLoading(false);
+      const currentCompanyId =
+        getCurrentCompanyId();
+
+      if (
+        typeof currentCompanyId !== "string" ||
+        currentCompanyId.trim() === ""
+      ) {
+        if (!cancelled) {
+          setLoading(false);
+          setError(
+            "Your authenticated company could not be determined. Please sign in again."
+          );
+        }
+
         return;
       }
 
@@ -132,25 +154,41 @@ function WarehouseViewContent() {
         setError(null);
 
         const data = await getWarehouse(
-          COMPANY_ID,
-          warehouseId
+          currentCompanyId,
+          currentWarehouseId
         );
 
-        setWarehouse(data);
-        setForm(toForm(data));
+        if (!cancelled) {
+          setWarehouse(data);
+
+          setForm(
+            toForm(
+              data,
+              currentCompanyId
+            )
+          );
+        }
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load warehouse."
-        );
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load warehouse."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     load();
-  }, [warehouseId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canView, warehouseId]);
 
   function updateField(
     field: keyof WarehouseCreateRequest,
@@ -167,11 +205,27 @@ function WarehouseViewContent() {
   }
 
   function openEdit() {
-    if (!warehouse) {
+    if (!warehouse || !canUpdate) {
       return;
     }
 
-    setForm(toForm(warehouse));
+    const currentCompanyId =
+      getCurrentCompanyId();
+
+    if (
+      typeof currentCompanyId !== "string" ||
+      currentCompanyId.trim() === ""
+    ) {
+      return;
+    }
+
+    setForm(
+      toForm(
+        warehouse,
+        currentCompanyId
+      )
+    );
+
     setSaveError(null);
     setShowEdit(true);
   }
@@ -184,9 +238,26 @@ function WarehouseViewContent() {
     setShowEdit(false);
     setSaveError(null);
 
-    if (warehouse) {
-      setForm(toForm(warehouse));
+    if (!warehouse) {
+      return;
     }
+
+    const currentCompanyId =
+      getCurrentCompanyId();
+
+    if (
+      typeof currentCompanyId !== "string" ||
+      currentCompanyId.trim() === ""
+    ) {
+      return;
+    }
+
+    setForm(
+      toForm(
+        warehouse,
+        currentCompanyId
+      )
+    );
   }
 
   async function handleSave(
@@ -194,7 +265,26 @@ function WarehouseViewContent() {
   ) {
     event.preventDefault();
 
-    if (!warehouseId || !form) {
+    if (
+      !warehouseId ||
+      !form ||
+      !canUpdate
+    ) {
+      return;
+    }
+
+    const currentWarehouseId = warehouseId;
+
+    const currentCompanyId =
+      getCurrentCompanyId();
+
+    if (
+      typeof currentCompanyId !== "string" ||
+      currentCompanyId.trim() === ""
+    ) {
+      setSaveError(
+        "Company context is unavailable. Please sign in again."
+      );
       return;
     }
 
@@ -218,11 +308,11 @@ function WarehouseViewContent() {
 
       const updated =
         await updateWarehouse(
-          COMPANY_ID,
-          warehouseId,
+          currentCompanyId,
+          currentWarehouseId,
           {
             ...form,
-            companyId: COMPANY_ID,
+            companyId: currentCompanyId,
             code: form.code.trim(),
             name: form.name.trim(),
             addressLine1:
@@ -245,7 +335,14 @@ function WarehouseViewContent() {
         );
 
       setWarehouse(updated);
-      setForm(toForm(updated));
+
+      setForm(
+        toForm(
+          updated,
+          currentCompanyId
+        )
+      );
+
       setShowEdit(false);
     } catch (err) {
       setSaveError(
@@ -263,10 +360,108 @@ function WarehouseViewContent() {
       return;
     }
 
+    const currentWarehouseId = warehouseId;
+
     router.push(
       `/warehouse-locations?warehouseId=${encodeURIComponent(
-        warehouseId
+        currentWarehouseId
       )}`
+    );
+  }
+
+  const companyIdAvailable =
+    (() => {
+      const currentCompanyId =
+        getCurrentCompanyId();
+
+      return (
+        typeof currentCompanyId === "string" &&
+        currentCompanyId.trim() !== ""
+      );
+    })();
+
+  if (!canView) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Access denied
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              You do not have permission to view warehouses.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!companyIdAvailable) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
+            <p className="text-sm font-semibold text-danger">
+              Company context unavailable
+            </p>
+
+            <p className="mt-1 text-sm text-danger">
+              Your authenticated company could not be determined.
+              Please sign in again.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!warehouseId) {
+    return (
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10 text-danger">
+            <p className="text-sm font-semibold">
+              Unable to load warehouse
+            </p>
+
+            <p className="mt-1 text-sm">
+              Warehouse ID is missing.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/warehouses")
+              }
+              className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Back to Warehouses
+            </button>
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
@@ -360,13 +555,15 @@ function WarehouseViewContent() {
                     View Locations
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={openEdit}
-                    className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                  >
-                    Edit Warehouse
-                  </button>
+                  {canUpdate && (
+                    <button
+                      type="button"
+                      onClick={openEdit}
+                      className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                    >
+                      Edit Warehouse
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -476,7 +673,8 @@ function WarehouseViewContent() {
 
         {showEdit &&
           warehouse &&
-          form && (
+          form &&
+          canUpdate && (
             <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 px-4 py-8">
               <div className="mx-auto w-full max-w-4xl rounded-xl bg-surface shadow-xl">
                 <div className="flex items-center justify-between border-b border-line px-6 py-5">
@@ -683,3 +881,4 @@ export default function WarehouseViewPage() {
     </Suspense>
   );
 }
+
