@@ -70,6 +70,7 @@ export default function WarehouseLocationsPage() {
     }
 
     if (!warehouseId) {
+      setLoading(false);
       return;
     }
 
@@ -485,9 +486,30 @@ export default function WarehouseLocationsPage() {
           </div>
         )}
 
-        {loading && (
+        {!warehouseId && (
           <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-slate-700" />
+            <h2 className="text-base font-semibold text-ink">
+              Select a warehouse
+            </h2>
+
+            <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
+              Locations are managed per warehouse. Choose a warehouse to
+              view and manage its locations.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push("/warehouses")}
+              className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Go to Warehouses
+            </button>
+          </div>
+        )}
+
+        {warehouseId && loading && (
+          <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary-600" />
 
             <p className="mt-4 text-sm text-ink-muted">
               Loading warehouse locations...
@@ -495,7 +517,7 @@ export default function WarehouseLocationsPage() {
           </div>
         )}
 
-        {!loading && error && (
+        {warehouseId && !loading && error && (
           <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
             <p className="text-sm font-semibold text-danger">
               Unable to load warehouse locations
@@ -517,7 +539,8 @@ export default function WarehouseLocationsPage() {
           </div>
         )}
 
-        {!loading &&
+        {warehouseId &&
+          !loading &&
           !error &&
           filteredLocations.length === 0 && (
             <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
@@ -553,7 +576,8 @@ export default function WarehouseLocationsPage() {
             </div>
           )}
 
-        {!loading &&
+        {warehouseId &&
+          !loading &&
           !error &&
           filteredLocations.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">

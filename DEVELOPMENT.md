@@ -46,7 +46,7 @@ Then edit `backend/.env`:
 | `SPRING_PROFILES_ACTIVE=dev` | enables the development data seeder |
 | `NEXTWARE_JWT_SECRET` | long random string — `openssl rand -base64 48` |
 | `NEXTWARE_SECURITY_BOOTSTRAP_ENABLED=true` | seed companies, roles, users |
-| `NEXTWARE_BOOTSTRAP_PASSWORD` | dev-only password shared by every seeded user |
+| `NEXTWARE_SECURITY_BOOTSTRAP_PASSWORD` | dev-only password shared by every seeded user |
 | `NEXTWARE_DEMO_DATA_ENABLED=true` | seed demo master data |
 
 `backend/.env` is git-ignored. Never commit it and never put a real credential in it.
@@ -116,7 +116,7 @@ Open <http://localhost:3000>.
 | Nextware Demo Company | `10000000-0000-0000-0000-000000000001` |
 | Nextware Test Company | `20000000-0000-0000-0000-000000000002` |
 
-All users share the password from `NEXTWARE_BOOTSTRAP_PASSWORD`.
+All users share the password from `NEXTWARE_SECURITY_BOOTSTRAP_PASSWORD`.
 
 ### Nextware Demo Company
 
@@ -205,7 +205,7 @@ refuse to run if it is not present.
 
 | Symptom | Fix |
 |---------|-----|
-| `NEXTWARE_BOOTSTRAP_PASSWORD is not configured` | set it in `backend/.env` and re-source the file |
+| `NEXTWARE_SECURITY_BOOTSTRAP_PASSWORD is not configured` | set it in `backend/.env` and re-source the file |
 | `Port 8080 was already in use` | another backend is running; stop it or set `--server.port` |
 | Flyway `validate` failure | schema drift — `scripts/db-reset.sh` then restart |
 | Frontend calls fail with CORS | backend `SecurityConfig` allows `http://localhost:3000` only |

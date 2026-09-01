@@ -11,10 +11,6 @@ import {
   ThemeToggle,
 } from "@/components/ui/ThemeToggle";
 import {
-  SearchIcon,
-} from "@/components/ui/icons";
-import {
-  BellIcon,
   BoxIcon,
   CartDownIcon,
   CartUpIcon,
@@ -75,6 +71,12 @@ const navigation: {
         permission: "CATEGORY_VIEW",
       },
       {
+        label: "Units of Measure",
+        icon: LayersIcon,
+        href: "/units",
+        permission: "UNIT_OF_MEASURE_VIEW",
+      },
+      {
         label: "Customers",
         icon: UsersIcon,
         href: "/customers",
@@ -87,10 +89,16 @@ const navigation: {
         permission: "SUPPLIER_VIEW",
       },
       {
-        label: "Units of Measure",
-        icon: LayersIcon,
-        href: "/units",
-        permission: "UNIT_OF_MEASURE_VIEW",
+        label: "Warehouses",
+        icon: WarehouseIcon,
+        href: "/warehouses",
+        permission: "WAREHOUSE_VIEW",
+      },
+      {
+        label: "Warehouse Locations",
+        icon: WarehouseIcon,
+        href: "/warehouse-locations",
+        permission: "WAREHOUSE_LOCATION_VIEW",
       },
       {
         label: "Company",
@@ -109,18 +117,6 @@ const navigation: {
         href: "/inventory",
         permission: "INVENTORY_VIEW",
         soon: true,
-      },
-      {
-        label: "Warehouses",
-        icon: WarehouseIcon,
-        href: "/warehouses",
-        permission: "WAREHOUSE_VIEW",
-      },
-      {
-        label: "Warehouse Locations",
-        icon: WarehouseIcon,
-        href: "/warehouse-locations",
-        permission: "WAREHOUSE_LOCATION_VIEW",
       },
       {
         label: "Purchasing",
@@ -160,9 +156,9 @@ const navigation: {
     section: "System",
     items: [
       {
-        label: "Administration",
+        label: "Settings",
         icon: SettingsIcon,
-        href: "/administration",
+        href: "/settings",
         soon: true,
       },
     ],
@@ -608,37 +604,15 @@ export default function AppShell({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="hidden items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm text-ink-muted transition hover:bg-surface-hover sm:flex"
-              aria-label="Search"
-            >
-              <SearchIcon />
-
-              <span>
-                Search
-              </span>
-            </button>
-
             <ThemeToggle />
 
-            <button
-              type="button"
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-hover hover:text-ink"
-              aria-label="Notifications"
-            >
-              <BellIcon />
-
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger" />
-            </button>
-
-            <button
-              type="button"
+            <div
               className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-600 text-xs font-semibold text-white"
               aria-label={`Signed in as ${displayName}`}
+              title={displayName}
             >
               {initials}
-            </button>
+            </div>
           </div>
         </header>
 

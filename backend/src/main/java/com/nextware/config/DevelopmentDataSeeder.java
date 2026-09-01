@@ -146,7 +146,7 @@ public class DevelopmentDataSeeder implements CommandLineRunner {
             if (bootstrapPassword == null || bootstrapPassword.isBlank()) {
                 throw new IllegalStateException(
                         "Development security bootstrap is enabled, but "
-                                + "NEXTWARE_BOOTSTRAP_PASSWORD is not configured."
+                                + "NEXTWARE_SECURITY_BOOTSTRAP_PASSWORD is not configured."
                 );
             }
 

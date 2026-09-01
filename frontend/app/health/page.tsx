@@ -26,11 +26,11 @@ export default function HealthPage() {
         </h1>
 
         {error ? (
-          <p className="text-red-600">
+          <p className="text-danger">
             Backend connection failed: {error}
           </p>
         ) : (
-          <p className="text-green-600">{status}</p>
+          <p className="text-success">{status}</p>
         )}
       </div>
     </main>
