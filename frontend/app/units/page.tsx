@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -18,8 +19,6 @@ import {
   PowerIcon,
   SearchIcon,
 } from "@/components/ui/icons";
-
-const API_BASE_URL = "http://localhost:8080";
 
 interface UnitOfMeasure {
   id: string;
@@ -160,7 +159,7 @@ export default function UnitsPage() {
       const companyId = await getCompanyId();
 
       const response = await authFetch(
-        `${API_BASE_URL}/api/unit-of-measures?companyId=${encodeURIComponent(
+        `/api/unit-of-measures?companyId=${encodeURIComponent(
           companyId
         )}`,
         {
@@ -308,10 +307,10 @@ export default function UnitsPage() {
       };
 
       const url = editingUnit
-        ? `${API_BASE_URL}/api/unit-of-measures/${encodeURIComponent(
+        ? `/api/unit-of-measures/${encodeURIComponent(
             editingUnit.id
           )}?companyId=${encodeURIComponent(companyId)}`
-        : `${API_BASE_URL}/api/unit-of-measures`;
+        : `/api/unit-of-measures`;
 
       const response = await authFetch(url, {
         method: editingUnit ? "PUT" : "POST",
@@ -423,7 +422,7 @@ export default function UnitsPage() {
 
       if (dialogType === "deactivate") {
         const response = await authFetch(
-          `${API_BASE_URL}/api/unit-of-measures/${encodeURIComponent(
+          `/api/unit-of-measures/${encodeURIComponent(
             dialogUnit.id
           )}?companyId=${encodeURIComponent(companyId)}`,
           {
@@ -457,7 +456,7 @@ export default function UnitsPage() {
         });
       } else {
         const response = await authFetch(
-          `${API_BASE_URL}/api/unit-of-measures/${encodeURIComponent(
+          `/api/unit-of-measures/${encodeURIComponent(
             dialogUnit.id
           )}?companyId=${encodeURIComponent(companyId)}`,
           {
@@ -1010,3 +1009,4 @@ export default function UnitsPage() {
     </AppShell>
   );
 }
+
