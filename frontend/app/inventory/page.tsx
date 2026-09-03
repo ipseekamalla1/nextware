@@ -5,28 +5,40 @@ import AppShell from "@/components/layout/AppShell";
 import { AlertIcon, SearchIcon } from "@/components/ui/icons";
 import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import {
+  getProducts,
+  getWarehouses,
+  getWarehouseLocations,
+  Product,
+  Warehouse,
+  WarehouseLocation,
+} from "@/lib/api";
+import {
   getInventoryBalances,
   InventoryBalance,
 } from "@/lib/inventoryApi";
 
+interface InventoryRow extends InventoryBalance {
+  product: Product | null;
+  warehouse: Warehouse | null;
+  location: WarehouseLocation | null;
+}
+
 export default function InventoryPage() {
   const companyId = getCurrentCompanyId();
-
   const canView = hasPermission("INVENTORY_VIEW");
 
-  const [balances, setBalances] = useState<
-    InventoryBalance[]
-  >([]);
+  const [balances, setBalances] = useState<InventoryBalance[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [locations, setLocations] = useState<WarehouseLocation[]>([]);
 
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState("");
-  const [locationFilter, setLocationFilter] =
-    useState("");
+  const [warehouseFilter, setWarehouseFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(
-    null
-  );
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!canView || !companyId) {
@@ -34,10 +46,10 @@ export default function InventoryPage() {
       return;
     }
 
-    loadBalances();
+    void loadInventory();
   }, [canView, companyId]);
 
-  async function loadBalances() {
+  async function loadInventory() {
     if (!companyId || !canView) {
       return;
     }
@@ -46,11 +58,39 @@ export default function InventoryPage() {
       setLoading(true);
       setError(null);
 
-      const data = await getInventoryBalances(
-        companyId
+      const [productData, warehouseData] = await Promise.all([
+        getProducts(companyId),
+        getWarehouses(companyId),
+      ]);
+
+      const activeWarehouses = warehouseData.filter(
+        (warehouse) => warehouse.active
       );
 
-      setBalances(data);
+      const locationResults = await Promise.all(
+        activeWarehouses.map((warehouse) =>
+          getWarehouseLocations(warehouse.id)
+        )
+      );
+
+      const allLocations = locationResults
+        .flat()
+        .filter((location) => location.active);
+
+      const balanceResults = await Promise.all(
+        allLocations.map((location) =>
+          getInventoryBalances(
+            companyId,
+            undefined,
+            location.id
+          )
+        )
+      );
+
+      setProducts(productData);
+      setWarehouses(warehouseData);
+      setLocations(allLocations);
+      setBalances(balanceResults.flat());
     } catch (err) {
       setError(
         err instanceof Error
@@ -62,89 +102,162 @@ export default function InventoryPage() {
     }
   }
 
-  const filteredBalances = useMemo(() => {
-    const normalizedSearch =
-      search.trim().toLowerCase();
+  const productMap = useMemo(() => {
+    return new Map(
+      products.map((product) => [product.id, product])
+    );
+  }, [products]);
 
-    return balances.filter((balance) => {
-      const productId =
-        balance.productId.toLowerCase();
+  const warehouseMap = useMemo(() => {
+    return new Map(
+      warehouses.map((warehouse) => [warehouse.id, warehouse])
+    );
+  }, [warehouses]);
 
-      const locationId =
-        balance.warehouseLocationId.toLowerCase();
+  const locationMap = useMemo(() => {
+    return new Map(
+      locations.map((location) => [location.id, location])
+    );
+  }, [locations]);
+
+  const rows = useMemo<InventoryRow[]>(() => {
+    return balances.map((balance) => {
+      const product =
+        productMap.get(balance.productId) ?? null;
+
+      const location =
+        locationMap.get(balance.warehouseLocationId) ?? null;
+
+      const warehouse = location
+        ? warehouseMap.get(location.warehouseId) ?? null
+        : null;
+
+      return {
+        ...balance,
+        product,
+        warehouse,
+        location,
+      };
+    });
+  }, [
+    balances,
+    productMap,
+    warehouseMap,
+    locationMap,
+  ]);
+
+  const activeProducts = useMemo(() => {
+    return products
+      .filter((product) => product.active)
+      .sort((a, b) => a.sku.localeCompare(b.sku));
+  }, [products]);
+
+  const activeWarehouses = useMemo(() => {
+    return warehouses
+      .filter((warehouse) => warehouse.active)
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [warehouses]);
+
+  const filteredLocations = useMemo(() => {
+    return locations
+      .filter((location) => {
+        if (!warehouseFilter) {
+          return true;
+        }
+
+        return location.warehouseId === warehouseFilter;
+      })
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [locations, warehouseFilter]);
+
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      const productSearch = [
+        row.product?.sku ?? "",
+        row.product?.name ?? "",
+        row.productId,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const warehouseSearch = [
+        row.warehouse?.code ?? "",
+        row.warehouse?.name ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const locationSearch = [
+        row.location?.code ?? "",
+        row.location?.name ?? "",
+        row.warehouseLocationId,
+      ]
+        .join(" ")
+        .toLowerCase();
 
       const matchesSearch =
         normalizedSearch === "" ||
-        productId.includes(normalizedSearch) ||
-        locationId.includes(normalizedSearch);
+        productSearch.includes(normalizedSearch) ||
+        warehouseSearch.includes(normalizedSearch) ||
+        locationSearch.includes(normalizedSearch);
 
       const matchesProduct =
         productFilter === "" ||
-        balance.productId === productFilter;
+        row.productId === productFilter;
+
+      const matchesWarehouse =
+        warehouseFilter === "" ||
+        row.location?.warehouseId === warehouseFilter;
 
       const matchesLocation =
         locationFilter === "" ||
-        balance.warehouseLocationId ===
-          locationFilter;
+        row.warehouseLocationId === locationFilter;
 
       return (
         matchesSearch &&
         matchesProduct &&
+        matchesWarehouse &&
         matchesLocation
       );
     });
   }, [
-    balances,
+    rows,
     search,
     productFilter,
+    warehouseFilter,
     locationFilter,
   ]);
 
-  const productIds = useMemo(() => {
-    return Array.from(
-      new Set(
-        balances.map(
-          (balance) => balance.productId
-        )
-      )
-    ).sort();
-  }, [balances]);
-
-  const locationIds = useMemo(() => {
-    return Array.from(
-      new Set(
-        balances.map(
-          (balance) =>
-            balance.warehouseLocationId
-        )
-      )
-    ).sort();
-  }, [balances]);
-
   const totals = useMemo(() => {
-    return filteredBalances.reduce(
-      (summary, balance) => {
-        return {
-          quantity:
-            summary.quantity +
-            balance.quantity,
-
-          reserved:
-            summary.reserved +
-            balance.reservedQuantity,
-
-          available:
-            summary.available +
-            balance.availableQuantity,
-        };
-      },
+    return filteredRows.reduce(
+      (summary, row) => ({
+        quantity:
+          summary.quantity + row.quantity,
+        reserved:
+          summary.reserved + row.reservedQuantity,
+        available:
+          summary.available + row.availableQuantity,
+      }),
       {
         quantity: 0,
         reserved: 0,
         available: 0,
       }
     );
-  }, [filteredBalances]);
+  }, [filteredRows]);
+
+  useEffect(() => {
+    if (
+      locationFilter &&
+      !filteredLocations.some(
+        (location) => location.id === locationFilter
+      )
+    ) {
+      setLocationFilter("");
+    }
+  }, [filteredLocations, locationFilter]);
 
   if (!canView) {
     return (
@@ -156,8 +269,7 @@ export default function InventoryPage() {
             </p>
 
             <p className="mt-1 text-sm text-danger">
-              You do not have permission to view
-              inventory.
+              You do not have permission to view inventory.
             </p>
           </div>
         </div>
@@ -175,8 +287,8 @@ export default function InventoryPage() {
             </p>
 
             <p className="mt-1 text-sm text-danger">
-              Your authenticated company could not
-              be determined. Please sign in again.
+              Your authenticated company could not be
+              determined. Please sign in again.
             </p>
           </div>
         </div>
@@ -192,17 +304,14 @@ export default function InventoryPage() {
             Inventory
           </div>
 
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-ink">
-              Inventory
-            </h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            Inventory
+          </h1>
 
-            <p className="mt-1 text-sm text-ink-muted">
-              View inventory quantities, reservations
-              and available stock by warehouse
-              location.
-            </p>
-          </div>
+          <p className="mt-1 text-sm text-ink-muted">
+            View inventory quantities, reservations and
+            available stock by warehouse location.
+          </p>
         </div>
 
         <div className="mb-5 grid gap-4 md:grid-cols-3">
@@ -216,7 +325,7 @@ export default function InventoryPage() {
             </p>
 
             <p className="mt-1 text-xs text-ink-muted">
-              Across filtered locations
+              Across filtered inventory
             </p>
           </div>
 
@@ -250,8 +359,8 @@ export default function InventoryPage() {
         </div>
 
         <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <div className="relative flex-1">
+          <div className="grid gap-3 lg:grid-cols-4">
+            <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-muted">
                 <SearchIcon />
               </div>
@@ -262,7 +371,7 @@ export default function InventoryPage() {
                 onChange={(event) =>
                   setSearch(event.target.value)
                 }
-                placeholder="Search by product or location ID..."
+                placeholder="Search inventory..."
                 className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
               />
             </div>
@@ -270,22 +379,37 @@ export default function InventoryPage() {
             <select
               value={productFilter}
               onChange={(event) =>
-                setProductFilter(
-                  event.target.value
-                )
+                setProductFilter(event.target.value)
               }
               className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
-              <option value="">
-                All Products
-              </option>
+              <option value="">All Products</option>
 
-              {productIds.map((productId) => (
+              {activeProducts.map((product) => (
                 <option
-                  key={productId}
-                  value={productId}
+                  key={product.id}
+                  value={product.id}
                 >
-                  {productId}
+                  {product.sku} — {product.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={warehouseFilter}
+              onChange={(event) =>
+                setWarehouseFilter(event.target.value)
+              }
+              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
+            >
+              <option value="">All Warehouses</option>
+
+              {activeWarehouses.map((warehouse) => (
+                <option
+                  key={warehouse.id}
+                  value={warehouse.id}
+                >
+                  {warehouse.code} — {warehouse.name}
                 </option>
               ))}
             </select>
@@ -293,22 +417,21 @@ export default function InventoryPage() {
             <select
               value={locationFilter}
               onChange={(event) =>
-                setLocationFilter(
-                  event.target.value
-                )
+                setLocationFilter(event.target.value)
               }
               className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
-              <option value="">
-                All Locations
-              </option>
+              <option value="">All Locations</option>
 
-              {locationIds.map((locationId) => (
+              {filteredLocations.map((location) => (
                 <option
-                  key={locationId}
-                  value={locationId}
+                  key={location.id}
+                  value={location.id}
                 >
-                  {locationId}
+                  {location.code}
+                  {location.name
+                    ? ` — ${location.name}`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -343,7 +466,7 @@ export default function InventoryPage() {
 
                 <button
                   type="button"
-                  onClick={loadBalances}
+                  onClick={() => void loadInventory()}
                   className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
                 >
                   Try Again
@@ -355,7 +478,7 @@ export default function InventoryPage() {
 
         {!loading &&
           !error &&
-          filteredBalances.length === 0 && (
+          filteredRows.length === 0 && (
             <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-active text-xl font-semibold text-ink-muted">
                 I
@@ -368,6 +491,7 @@ export default function InventoryPage() {
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
                 {search ||
                 productFilter ||
+                warehouseFilter ||
                 locationFilter
                   ? "No inventory balances match your current filters."
                   : "Inventory balances will appear here when stock transactions are recorded."}
@@ -377,18 +501,22 @@ export default function InventoryPage() {
 
         {!loading &&
           !error &&
-          filteredBalances.length > 0 && (
+          filteredRows.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[950px] text-left">
+                <table className="w-full min-w-[1100px] text-left">
                   <thead className="border-b border-line bg-surface-hover">
                     <tr>
                       <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Product ID
+                        Product
                       </th>
 
                       <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Warehouse Location ID
+                        Warehouse
+                      </th>
+
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Location
                       </th>
 
                       <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
@@ -406,59 +534,105 @@ export default function InventoryPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredBalances.map(
-                      (balance) => (
-                        <tr
-                          key={balance.id}
-                          className="transition hover:bg-surface-hover"
-                        >
-                          <td className="px-5 py-4">
-                            <span className="font-mono text-sm font-medium text-ink-secondary">
-                              {balance.productId}
-                            </span>
-                          </td>
+                    {filteredRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="transition hover:bg-surface-hover"
+                      >
+                        <td className="px-5 py-4">
+                          {row.product ? (
+                            <div>
+                              <p className="text-sm font-semibold text-ink">
+                                {row.product.name}
+                              </p>
 
-                          <td className="px-5 py-4">
-                            <span className="font-mono text-sm text-ink-secondary">
-                              {
-                                balance.warehouseLocationId
-                              }
-                            </span>
-                          </td>
+                              <p className="mt-0.5 font-mono text-xs text-ink-muted">
+                                {row.product.sku}
+                              </p>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="font-mono text-sm font-medium text-ink-secondary">
+                                {row.productId}
+                              </p>
 
-                          <td className="px-5 py-4 text-right">
-                            <span className="text-sm font-semibold text-ink">
-                              {balance.quantity.toLocaleString()}
-                            </span>
-                          </td>
+                              <p className="mt-0.5 text-xs text-ink-muted">
+                                Product unavailable
+                              </p>
+                            </div>
+                          )}
+                        </td>
 
-                          <td className="px-5 py-4 text-right">
-                            <span className="text-sm text-ink-secondary">
-                              {balance.reservedQuantity.toLocaleString()}
-                            </span>
-                          </td>
+                        <td className="px-5 py-4">
+                          {row.warehouse ? (
+                            <div>
+                              <p className="text-sm font-medium text-ink-secondary">
+                                {row.warehouse.name}
+                              </p>
 
-                          <td className="px-5 py-4 text-right">
-                            <span
-                              className={
-                                balance.availableQuantity >
-                                0
-                                  ? "text-sm font-semibold text-success"
-                                  : "text-sm font-semibold text-danger"
-                              }
-                            >
-                              {balance.availableQuantity.toLocaleString()}
+                              <p className="mt-0.5 font-mono text-xs text-ink-muted">
+                                {row.warehouse.code}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-ink-muted">
+                              —
                             </span>
-                          </td>
-                        </tr>
-                      )
-                    )}
+                          )}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          {row.location ? (
+                            <div>
+                              <p className="text-sm font-medium text-ink-secondary">
+                                {row.location.name ||
+                                  row.location.code}
+                              </p>
+
+                              {row.location.name && (
+                                <p className="mt-0.5 font-mono text-xs text-ink-muted">
+                                  {row.location.code}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="font-mono text-xs text-ink-muted">
+                              {row.warehouseLocationId}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-5 py-4 text-right">
+                          <span className="text-sm font-semibold text-ink">
+                            {row.quantity.toLocaleString()}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4 text-right">
+                          <span className="text-sm text-ink-secondary">
+                            {row.reservedQuantity.toLocaleString()}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4 text-right">
+                          <span
+                            className={
+                              row.availableQuantity > 0
+                                ? "text-sm font-semibold text-success"
+                                : "text-sm font-semibold text-danger"
+                            }
+                          >
+                            {row.availableQuantity.toLocaleString()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
 
                   <tfoot className="border-t border-line bg-surface-hover">
                     <tr>
                       <td
-                        colSpan={2}
+                        colSpan={3}
                         className="px-5 py-4 text-sm font-semibold text-ink"
                       >
                         Total
