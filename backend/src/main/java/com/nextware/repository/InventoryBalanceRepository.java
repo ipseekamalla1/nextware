@@ -3,8 +3,9 @@ package com.nextware.repository;
 import com.nextware.entity.InventoryBalance;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -46,5 +47,36 @@ public interface InventoryBalanceRepository
     boolean existsByProductIdAndWarehouseLocationId(
             UUID productId,
             UUID warehouseLocationId
+    );
+
+    @Modifying
+    @Query(
+            value = """
+                    INSERT INTO inventory_balance (
+                        id,
+                        product_id,
+                        warehouse_location_id,
+                        quantity,
+                        reserved_quantity,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (
+                        gen_random_uuid(),
+                        :productId,
+                        :warehouseLocationId,
+                        0,
+                        0,
+                        CURRENT_TIMESTAMP,
+                        CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (product_id, warehouse_location_id)
+                    DO NOTHING
+                    """,
+            nativeQuery = true
+    )
+    int createIfMissing(
+            @Param("productId") UUID productId,
+            @Param("warehouseLocationId") UUID warehouseLocationId
     );
 }
