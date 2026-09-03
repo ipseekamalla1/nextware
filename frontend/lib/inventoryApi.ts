@@ -79,10 +79,7 @@ export async function getInventoryBalances(
   }
 
   if (warehouseLocationId) {
-    params.set(
-      "warehouseLocationId",
-      warehouseLocationId
-    );
+    params.set("warehouseLocationId", warehouseLocationId);
   }
 
   const response = await fetch(
@@ -119,10 +116,7 @@ export async function getInventoryTransactions(
   }
 
   if (warehouseLocationId) {
-    params.set(
-      "warehouseLocationId",
-      warehouseLocationId
-    );
+    params.set("warehouseLocationId", warehouseLocationId);
   }
 
   const response = await fetch(

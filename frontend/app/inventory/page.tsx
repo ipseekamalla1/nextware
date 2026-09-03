@@ -64,6 +64,76 @@ const transactionTypeOptions: {
   },
 ];
 
+const historyTypeOptions: {
+  value: InventoryTransactionType | "";
+  label: string;
+}[] = [
+  { value: "", label: "All transaction types" },
+  { value: "RECEIPT", label: "Receipt" },
+  { value: "RETURN", label: "Return" },
+  { value: "ADJUSTMENT", label: "Adjustment" },
+  { value: "STOCKTAKE", label: "Stocktake" },
+  { value: "DAMAGE", label: "Damage" },
+  { value: "SHIPMENT", label: "Shipment" },
+  { value: "TRANSFER_IN", label: "Transfer In" },
+  { value: "TRANSFER_OUT", label: "Transfer Out" },
+];
+
+function formatTransactionType(
+  type: InventoryTransactionType
+): string {
+  switch (type) {
+    case "TRANSFER_IN":
+      return "Transfer In";
+    case "TRANSFER_OUT":
+      return "Transfer Out";
+    case "STOCKTAKE":
+      return "Stocktake";
+    case "ADJUSTMENT":
+      return "Adjustment";
+    case "RECEIPT":
+      return "Receipt";
+    case "SHIPMENT":
+      return "Shipment";
+    case "RETURN":
+      return "Return";
+    case "DAMAGE":
+      return "Damage";
+    default:
+      return type;
+  }
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
+
+function formatQuantity(value: number): string {
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: 4,
+  });
+}
+
+function transactionQuantityClass(
+  quantity: number
+): string {
+  if (quantity > 0) {
+    return "text-success";
+  }
+
+  if (quantity < 0) {
+    return "text-danger";
+  }
+
+  return "text-ink";
+}
+
 export default function InventoryPage() {
   const companyId = getCurrentCompanyId();
 
@@ -71,14 +141,38 @@ export default function InventoryPage() {
   const canAdjust = hasPermission("INVENTORY_ADJUST");
 
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
+  const [transactions, setTransactions] = useState<
+    InventoryTransaction[]
+  >([]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [locations, setLocations] = useState<WarehouseLocation[]>([]);
+  const [locations, setLocations] = useState<WarehouseLocation[]>(
+    []
+  );
+
+  const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(
+    null
+  );
 
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyProductFilter, setHistoryProductFilter] =
+    useState("");
+  const [historyWarehouseFilter, setHistoryWarehouseFilter] =
+    useState("");
+  const [historyLocationFilter, setHistoryLocationFilter] =
+    useState("");
+  const [historyTypeFilter, setHistoryTypeFilter] =
+    useState<InventoryTransactionType | "">("");
 
   const [showAdjustmentForm, setShowAdjustmentForm] =
     useState(false);
@@ -89,10 +183,8 @@ export default function InventoryPage() {
   const [transactionProductId, setTransactionProductId] =
     useState("");
 
-  const [
-    transactionWarehouseFilter,
-    setTransactionWarehouseFilter,
-  ] = useState("");
+  const [transactionWarehouseFilter, setTransactionWarehouseFilter] =
+    useState("");
 
   const [transactionLocationId, setTransactionLocationId] =
     useState("");
@@ -100,12 +192,8 @@ export default function InventoryPage() {
   const [transactionQuantity, setTransactionQuantity] =
     useState("");
 
-  const [referenceType, setReferenceType] =
-    useState("");
-
-  const [referenceId, setReferenceId] =
-    useState("");
-
+  const [referenceType, setReferenceType] = useState("");
+  const [referenceId, setReferenceId] = useState("");
   const [notes, setNotes] = useState("");
 
   const [transactionError, setTransactionError] =
@@ -117,13 +205,10 @@ export default function InventoryPage() {
   const [savingTransaction, setSavingTransaction] =
     useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] =
-    useState<string | null>(null);
-
   useEffect(() => {
     if (!canView || !companyId) {
       setLoading(false);
+      setHistoryLoading(false);
       return;
     }
 
@@ -137,7 +222,9 @@ export default function InventoryPage() {
 
     try {
       setLoading(true);
+      setHistoryLoading(true);
       setError(null);
+      setHistoryError(null);
 
       const [productData, warehouseData] =
         await Promise.all([
@@ -145,45 +232,64 @@ export default function InventoryPage() {
           getWarehouses(companyId),
         ]);
 
-      const activeWarehouses =
-        warehouseData.filter(
-          (warehouse) => warehouse.active
-        );
+      const activeWarehouses = warehouseData.filter(
+        (warehouse) => warehouse.active
+      );
 
-      const locationResults =
-        await Promise.all(
-          activeWarehouses.map((warehouse) =>
-            getWarehouseLocations(warehouse.id)
-          )
-        );
+      const locationResults = await Promise.all(
+        activeWarehouses.map((warehouse) =>
+          getWarehouseLocations(warehouse.id)
+        )
+      );
 
       const allLocations = locationResults
         .flat()
         .filter((location) => location.active);
 
-      const balanceResults =
-        await Promise.all(
-          allLocations.map((location) =>
-            getInventoryBalances(
-              companyId,
-              undefined,
-              location.id
-            )
+      const balanceResults = await Promise.all(
+        allLocations.map((location) =>
+          getInventoryBalances(
+            companyId,
+            undefined,
+            location.id
           )
+        )
+      );
+
+      const transactionResults = await Promise.all(
+        allLocations.map((location) =>
+          getInventoryTransactions(
+            companyId,
+            undefined,
+            location.id
+          )
+        )
+      );
+
+      const allTransactions = transactionResults
+        .flat()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() -
+            new Date(a.createdAt).getTime()
         );
 
       setProducts(productData);
       setWarehouses(warehouseData);
       setLocations(allLocations);
       setBalances(balanceResults.flat());
+      setTransactions(allTransactions);
     } catch (err) {
-      setError(
+      const message =
         err instanceof Error
           ? err.message
-          : "Failed to load inventory."
-      );
+          : "Failed to load inventory.";
+
+      setError(message);
+      setHistoryError(message);
     } finally {
       setLoading(false);
+      setHistoryLoading(false);
     }
   }
 
@@ -239,8 +345,7 @@ export default function InventoryPage() {
       return;
     }
 
-    const parsedQuantity =
-      Number(transactionQuantity);
+    const parsedQuantity = Number(transactionQuantity);
 
     if (!Number.isFinite(parsedQuantity)) {
       setTransactionError(
@@ -250,9 +355,7 @@ export default function InventoryPage() {
     }
 
     if (parsedQuantity === 0) {
-      setTransactionError(
-        "Quantity cannot be zero."
-      );
+      setTransactionError("Quantity cannot be zero.");
       return;
     }
 
@@ -275,8 +378,7 @@ export default function InventoryPage() {
       await createInventoryTransaction({
         companyId,
         productId: transactionProductId,
-        warehouseLocationId:
-          transactionLocationId,
+        warehouseLocationId: transactionLocationId,
         transactionType,
         quantity: parsedQuantity,
         referenceType:
@@ -292,7 +394,7 @@ export default function InventoryPage() {
 
       await loadInventory();
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         setShowAdjustmentForm(false);
         resetTransactionForm();
       }, 700);
@@ -309,10 +411,7 @@ export default function InventoryPage() {
 
   const productMap = useMemo(() => {
     return new Map(
-      products.map((product) => [
-        product.id,
-        product,
-      ])
+      products.map((product) => [product.id, product])
     );
   }, [products]);
 
@@ -345,9 +444,7 @@ export default function InventoryPage() {
         ) ?? null;
 
       const warehouse = location
-        ? warehouseMap.get(
-            location.warehouseId
-          ) ?? null
+        ? warehouseMap.get(location.warehouseId) ?? null
         : null;
 
       return {
@@ -367,17 +464,13 @@ export default function InventoryPage() {
   const activeProducts = useMemo(() => {
     return products
       .filter((product) => product.active)
-      .sort((a, b) =>
-        a.sku.localeCompare(b.sku)
-      );
+      .sort((a, b) => a.sku.localeCompare(b.sku));
   }, [products]);
 
   const activeWarehouses = useMemo(() => {
     return warehouses
       .filter((warehouse) => warehouse.active)
-      .sort((a, b) =>
-        a.code.localeCompare(b.code)
-      );
+      .sort((a, b) => a.code.localeCompare(b.code));
   }, [warehouses]);
 
   const filteredLocations = useMemo(() => {
@@ -387,14 +480,9 @@ export default function InventoryPage() {
           return true;
         }
 
-        return (
-          location.warehouseId ===
-          warehouseFilter
-        );
+        return location.warehouseId === warehouseFilter;
       })
-      .sort((a, b) =>
-        a.code.localeCompare(b.code)
-      );
+      .sort((a, b) => a.code.localeCompare(b.code));
   }, [locations, warehouseFilter]);
 
   const transactionLocations = useMemo(() => {
@@ -409,12 +497,28 @@ export default function InventoryPage() {
           transactionWarehouseFilter
         );
       })
-      .sort((a, b) =>
-        a.code.localeCompare(b.code)
-      );
+      .sort((a, b) => a.code.localeCompare(b.code));
   }, [
     locations,
     transactionWarehouseFilter,
+  ]);
+
+  const historyLocations = useMemo(() => {
+    return locations
+      .filter((location) => {
+        if (!historyWarehouseFilter) {
+          return true;
+        }
+
+        return (
+          location.warehouseId ===
+          historyWarehouseFilter
+        );
+      })
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [
+    locations,
+    historyWarehouseFilter,
   ]);
 
   const selectedTransactionLocation =
@@ -460,15 +564,9 @@ export default function InventoryPage() {
 
       const matchesSearch =
         normalizedSearch === "" ||
-        productSearch.includes(
-          normalizedSearch
-        ) ||
-        warehouseSearch.includes(
-          normalizedSearch
-        ) ||
-        locationSearch.includes(
-          normalizedSearch
-        );
+        productSearch.includes(normalizedSearch) ||
+        warehouseSearch.includes(normalizedSearch) ||
+        locationSearch.includes(normalizedSearch);
 
       const matchesProduct =
         productFilter === "" ||
@@ -519,28 +617,104 @@ export default function InventoryPage() {
     );
   }, [filteredRows]);
 
+  const filteredTransactions = useMemo(() => {
+    const normalizedSearch =
+      historySearch.trim().toLowerCase();
+
+    return transactions.filter((transaction) => {
+      const product =
+        productMap.get(transaction.productId);
+
+      const location =
+        locationMap.get(
+          transaction.warehouseLocationId
+        );
+
+      const warehouse = location
+        ? warehouseMap.get(location.warehouseId)
+        : undefined;
+
+      const searchable = [
+        product?.sku ?? "",
+        product?.name ?? "",
+        transaction.productId,
+        warehouse?.code ?? "",
+        warehouse?.name ?? "",
+        location?.code ?? "",
+        location?.name ?? "",
+        transaction.transactionType,
+        formatTransactionType(
+          transaction.transactionType
+        ),
+        transaction.referenceType ?? "",
+        transaction.referenceId ?? "",
+        transaction.notes ?? "",
+        transaction.id,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch =
+        normalizedSearch === "" ||
+        searchable.includes(normalizedSearch);
+
+      const matchesProduct =
+        historyProductFilter === "" ||
+        transaction.productId ===
+          historyProductFilter;
+
+      const matchesWarehouse =
+        historyWarehouseFilter === "" ||
+        location?.warehouseId ===
+          historyWarehouseFilter;
+
+      const matchesLocation =
+        historyLocationFilter === "" ||
+        transaction.warehouseLocationId ===
+          historyLocationFilter;
+
+      const matchesType =
+        historyTypeFilter === "" ||
+        transaction.transactionType ===
+          historyTypeFilter;
+
+      return (
+        matchesSearch &&
+        matchesProduct &&
+        matchesWarehouse &&
+        matchesLocation &&
+        matchesType
+      );
+    });
+  }, [
+    transactions,
+    productMap,
+    locationMap,
+    warehouseMap,
+    historySearch,
+    historyProductFilter,
+    historyWarehouseFilter,
+    historyLocationFilter,
+    historyTypeFilter,
+  ]);
+
   useEffect(() => {
     if (
       locationFilter &&
       !filteredLocations.some(
-        (location) =>
-          location.id === locationFilter
+        (location) => location.id === locationFilter
       )
     ) {
       setLocationFilter("");
     }
-  }, [
-    filteredLocations,
-    locationFilter,
-  ]);
+  }, [filteredLocations, locationFilter]);
 
   useEffect(() => {
     if (
       transactionLocationId &&
       !transactionLocations.some(
         (location) =>
-          location.id ===
-          transactionLocationId
+          location.id === transactionLocationId
       )
     ) {
       setTransactionLocationId("");
@@ -548,6 +722,21 @@ export default function InventoryPage() {
   }, [
     transactionLocations,
     transactionLocationId,
+  ]);
+
+  useEffect(() => {
+    if (
+      historyLocationFilter &&
+      !historyLocations.some(
+        (location) =>
+          location.id === historyLocationFilter
+      )
+    ) {
+      setHistoryLocationFilter("");
+    }
+  }, [
+    historyLocations,
+    historyLocationFilter,
   ]);
 
   if (!canView) {
@@ -602,8 +791,8 @@ export default function InventoryPage() {
             </h1>
 
             <p className="mt-1 text-sm text-ink-muted">
-              View inventory quantities, reservations
-              and available stock by warehouse location.
+              View stock balances and the complete
+              inventory movement ledger.
             </p>
           </div>
 
@@ -627,10 +816,6 @@ export default function InventoryPage() {
             <p className="mt-2 text-2xl font-bold text-ink">
               {totals.quantity.toLocaleString()}
             </p>
-
-            <p className="mt-1 text-xs text-ink-muted">
-              Across filtered inventory
-            </p>
           </div>
 
           <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
@@ -640,10 +825,6 @@ export default function InventoryPage() {
 
             <p className="mt-2 text-2xl font-bold text-ink">
               {totals.reserved.toLocaleString()}
-            </p>
-
-            <p className="mt-1 text-xs text-ink-muted">
-              Quantity currently reserved
             </p>
           </div>
 
@@ -655,93 +836,91 @@ export default function InventoryPage() {
             <p className="mt-2 text-2xl font-bold text-ink">
               {totals.available.toLocaleString()}
             </p>
-
-            <p className="mt-1 text-xs text-ink-muted">
-              Quantity available for use
-            </p>
           </div>
         </div>
 
-        <div className="mb-5 rounded-xl border border-line bg-surface p-4 shadow-sm">
-          <div className="grid gap-3 lg:grid-cols-4">
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-muted">
-                <SearchIcon />
+        <div className="mb-8 rounded-xl border border-line bg-surface shadow-sm">
+          <div className="border-b border-line p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-ink">
+                  Inventory Balances
+                </h2>
+
+                <p className="mt-1 text-sm text-ink-muted">
+                  Current quantity by product and
+                  warehouse location.
+                </p>
               </div>
 
-              <input
-                type="text"
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search inventory..."
-                className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-ink-muted focus:border-primary-400"
-              />
+              <div className="relative w-full lg:w-80">
+                <SearchIcon
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+                />
+
+                <input
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search inventory..."
+                  className="w-full rounded-lg border border-line bg-surface px-9 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-primary-500"
+                />
+              </div>
             </div>
 
-            <select
-              value={productFilter}
-              onChange={(event) =>
-                setProductFilter(event.target.value)
-              }
-              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
-            >
-              <option value="">
-                All Products
-              </option>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <select
+                value={productFilter}
+                onChange={(event) =>
+                  setProductFilter(event.target.value)
+                }
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                <option value="">All products</option>
 
-              {activeProducts.map((product) => (
-                <option
-                  key={product.id}
-                  value={product.id}
-                >
-                  {product.sku} — {product.name}
-                </option>
-              ))}
-            </select>
+                {activeProducts.map((product) => (
+                  <option
+                    key={product.id}
+                    value={product.id}
+                  >
+                    {product.sku} — {product.name}
+                  </option>
+                ))}
+              </select>
 
-            <select
-              value={warehouseFilter}
-              onChange={(event) =>
-                setWarehouseFilter(
-                  event.target.value
-                )
-              }
-              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
-            >
-              <option value="">
-                All Warehouses
-              </option>
+              <select
+                value={warehouseFilter}
+                onChange={(event) => {
+                  setWarehouseFilter(
+                    event.target.value
+                  );
+                  setLocationFilter("");
+                }}
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                <option value="">All warehouses</option>
 
-              {activeWarehouses.map(
-                (warehouse) => (
+                {activeWarehouses.map((warehouse) => (
                   <option
                     key={warehouse.id}
                     value={warehouse.id}
                   >
-                    {warehouse.code} —{" "}
-                    {warehouse.name}
+                    {warehouse.code} — {warehouse.name}
                   </option>
-                )
-              )}
-            </select>
+                ))}
+              </select>
 
-            <select
-              value={locationFilter}
-              onChange={(event) =>
-                setLocationFilter(
-                  event.target.value
-                )
-              }
-              className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
-            >
-              <option value="">
-                All Locations
-              </option>
+              <select
+                value={locationFilter}
+                onChange={(event) =>
+                  setLocationFilter(event.target.value)
+                }
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                <option value="">All locations</option>
 
-              {filteredLocations.map(
-                (location) => (
+                {filteredLocations.map((location) => (
                   <option
                     key={location.id}
                     value={location.id}
@@ -751,28 +930,14 @@ export default function InventoryPage() {
                       ? ` — ${location.name}`
                       : ""}
                   </option>
-                )
-              )}
-            </select>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
 
-        {loading && (
-          <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary-600" />
-
-            <p className="mt-4 text-sm text-ink-muted">
-              Loading inventory...
-            </p>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
-            <div className="flex items-start gap-3">
-              <div className="text-danger">
-                <AlertIcon />
-              </div>
+          {error ? (
+            <div className="flex items-start gap-3 p-6">
+              <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
 
               <div>
                 <p className="text-sm font-semibold text-danger">
@@ -782,557 +947,736 @@ export default function InventoryPage() {
                 <p className="mt-1 text-sm text-danger">
                   {error}
                 </p>
-
-                <button
-                  type="button"
-                  onClick={() => void loadInventory()}
-                  className="mt-5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-                >
-                  Try Again
-                </button>
               </div>
             </div>
-          </div>
-        )}
+          ) : loading ? (
+            <div className="p-10 text-center text-sm text-ink-muted">
+              Loading inventory...
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="p-10 text-center">
+              <p className="text-sm font-semibold text-ink">
+                No inventory found
+              </p>
 
-        {!loading &&
-          !error &&
-          filteredRows.length === 0 && (
-            <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-active text-xl font-semibold text-ink-muted">
-                I
-              </div>
-
-              <h2 className="mt-4 text-base font-semibold text-ink">
-                No inventory balances found
-              </h2>
-
-              <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
-                {search ||
-                productFilter ||
-                warehouseFilter ||
-                locationFilter
-                  ? "No inventory balances match your current filters."
-                  : "Inventory balances will appear here when stock transactions are recorded."}
+              <p className="mt-1 text-sm text-ink-muted">
+                No inventory balances match the current
+                filters.
               </p>
             </div>
-          )}
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead className="border-b border-line bg-surface-muted">
+                  <tr>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Product
+                    </th>
 
-        {!loading &&
-          !error &&
-          filteredRows.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-left">
-                  <thead className="border-b border-line bg-surface-hover">
-                    <tr>
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Product
-                      </th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Warehouse
+                    </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Warehouse
-                      </th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Location
+                    </th>
 
-                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Location
-                      </th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Quantity
+                    </th>
 
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Quantity
-                      </th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Reserved
+                    </th>
 
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Reserved
-                      </th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Available
+                    </th>
+                  </tr>
+                </thead>
 
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Available
-                      </th>
-                    </tr>
-                  </thead>
+                <tbody className="divide-y divide-line">
+                  {filteredRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="transition hover:bg-surface-muted"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="text-sm font-semibold text-ink">
+                          {row.product?.sku ??
+                            "Unknown product"}
+                        </div>
 
-                  <tbody className="divide-y divide-line">
-                    {filteredRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="transition hover:bg-surface-hover"
-                      >
-                        <td className="px-5 py-4">
-                          {row.product ? (
-                            <div>
-                              <p className="text-sm font-semibold text-ink">
-                                {row.product.name}
-                              </p>
-
-                              <p className="mt-0.5 font-mono text-xs text-ink-muted">
-                                {row.product.sku}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="font-mono text-sm text-ink-secondary">
-                              {row.productId}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {row.warehouse ? (
-                            <div>
-                              <p className="text-sm font-medium text-ink-secondary">
-                                {row.warehouse.name}
-                              </p>
-
-                              <p className="mt-0.5 font-mono text-xs text-ink-muted">
-                                {row.warehouse.code}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-ink-muted">
-                              —
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {row.location ? (
-                            <div>
-                              <p className="text-sm font-medium text-ink-secondary">
-                                {row.location.name ||
-                                  row.location.code}
-                              </p>
-
-                              {row.location.name && (
-                                <p className="mt-0.5 font-mono text-xs text-ink-muted">
-                                  {row.location.code}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="font-mono text-xs text-ink-muted">
-                              {row.warehouseLocationId}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4 text-right">
-                          <span className="text-sm font-semibold text-ink">
-                            {row.quantity.toLocaleString()}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4 text-right">
-                          <span className="text-sm text-ink-secondary">
-                            {row.reservedQuantity.toLocaleString()}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4 text-right">
-                          <span
-                            className={
-                              row.availableQuantity > 0
-                                ? "text-sm font-semibold text-success"
-                                : "text-sm font-semibold text-danger"
-                            }
-                          >
-                            {row.availableQuantity.toLocaleString()}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-
-                  <tfoot className="border-t border-line bg-surface-hover">
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="px-5 py-4 text-sm font-semibold text-ink"
-                      >
-                        Total
+                        <div className="mt-0.5 text-xs text-ink-muted">
+                          {row.product?.name ??
+                            row.productId}
+                        </div>
                       </td>
 
-                      <td className="px-5 py-4 text-right text-sm font-bold text-ink">
-                        {totals.quantity.toLocaleString()}
+                      <td className="px-5 py-4">
+                        <div className="text-sm text-ink">
+                          {row.warehouse?.code ??
+                            "Unknown"}
+                        </div>
+
+                        <div className="mt-0.5 text-xs text-ink-muted">
+                          {row.warehouse?.name ?? ""}
+                        </div>
                       </td>
 
-                      <td className="px-5 py-4 text-right text-sm font-bold text-ink">
-                        {totals.reserved.toLocaleString()}
+                      <td className="px-5 py-4">
+                        <div className="text-sm font-medium text-ink">
+                          {row.location?.code ??
+                            "Unknown"}
+                        </div>
+
+                        <div className="mt-0.5 text-xs text-ink-muted">
+                          {row.location?.name ?? ""}
+                        </div>
                       </td>
 
-                      <td className="px-5 py-4 text-right text-sm font-bold text-ink">
-                        {totals.available.toLocaleString()}
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-ink">
+                        {formatQuantity(row.quantity)}
+                      </td>
+
+                      <td className="px-5 py-4 text-right text-sm text-ink">
+                        {formatQuantity(
+                          row.reservedQuantity
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-ink">
+                        {formatQuantity(
+                          row.availableQuantity
+                        )}
                       </td>
                     </tr>
-                  </tfoot>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+        </div>
 
-        {showAdjustmentForm && canAdjust && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-line bg-surface shadow-xl">
-              <div className="flex items-start justify-between border-b border-line px-6 py-5">
-                <div>
-                  <h2 className="text-lg font-bold text-ink">
-                    Record Stock Movement
-                  </h2>
+        <div className="rounded-xl border border-line bg-surface shadow-sm">
+          <div className="border-b border-line p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-ink">
+                  Transaction History
+                </h2>
 
-                  <p className="mt-1 text-sm text-ink-muted">
-                    Record an inventory transaction for a
-                    product and warehouse location.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={closeAdjustmentForm}
-                  disabled={savingTransaction}
-                  className="rounded-lg px-2 py-1 text-xl text-ink-muted transition hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
+                <p className="mt-1 text-sm text-ink-muted">
+                  Append-only inventory movement ledger.
+                </p>
               </div>
 
-              <div className="space-y-5 px-6 py-6">
-                {transactionError && (
-                  <div className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3">
-                    <p className="text-sm font-medium text-danger">
-                      {transactionError}
-                    </p>
-                  </div>
-                )}
+              <div className="relative w-full lg:w-80">
+                <SearchIcon
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+                />
 
-                {transactionSuccess && (
-                  <div className="rounded-lg border border-success/30 bg-success-soft px-4 py-3">
-                    <p className="text-sm font-medium text-success">
-                      {transactionSuccess}
-                    </p>
-                  </div>
-                )}
+                <input
+                  value={historySearch}
+                  onChange={(event) =>
+                    setHistorySearch(event.target.value)
+                  }
+                  placeholder="Search transaction history..."
+                  className="w-full rounded-lg border border-line bg-surface px-9 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-primary-500"
+                />
+              </div>
+            </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                      Transaction Type
-                    </label>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <select
+                value={historyProductFilter}
+                onChange={(event) =>
+                  setHistoryProductFilter(
+                    event.target.value
+                  )
+                }
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                <option value="">All products</option>
 
-                    <select
-                      value={transactionType}
-                      onChange={(event) =>
-                        setTransactionType(
-                          event.target
-                            .value as InventoryTransactionType
-                        )
-                      }
-                      disabled={savingTransaction}
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
-                    >
-                      {transactionTypeOptions.map(
-                        (option) => (
-                          <option
-                            key={option.value}
-                            value={option.value}
-                          >
-                            {option.label}
-                          </option>
-                        )
-                      )}
-                    </select>
+                {activeProducts.map((product) => (
+                  <option
+                    key={product.id}
+                    value={product.id}
+                  >
+                    {product.sku} — {product.name}
+                  </option>
+                ))}
+              </select>
 
-                    <p className="mt-1.5 text-xs text-ink-muted">
-                      {
-                        transactionTypeOptions.find(
-                          (option) =>
-                            option.value ===
-                            transactionType
-                        )?.description
-                      }
-                    </p>
-                  </div>
+              <select
+                value={historyWarehouseFilter}
+                onChange={(event) => {
+                  setHistoryWarehouseFilter(
+                    event.target.value
+                  );
+                  setHistoryLocationFilter("");
+                }}
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                <option value="">All warehouses</option>
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                {activeWarehouses.map((warehouse) => (
+                  <option
+                    key={warehouse.id}
+                    value={warehouse.id}
+                  >
+                    {warehouse.code} — {warehouse.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={historyLocationFilter}
+                onChange={(event) =>
+                  setHistoryLocationFilter(
+                    event.target.value
+                  )
+                }
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                <option value="">All locations</option>
+
+                {historyLocations.map((location) => (
+                  <option
+                    key={location.id}
+                    value={location.id}
+                  >
+                    {location.code}
+                    {location.name
+                      ? ` — ${location.name}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={historyTypeFilter}
+                onChange={(event) =>
+                  setHistoryTypeFilter(
+                    event.target
+                      .value as InventoryTransactionType | ""
+                  )
+                }
+                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+              >
+                {historyTypeOptions.map((option) => (
+                  <option
+                    key={option.value || "all"}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {historyError ? (
+            <div className="flex items-start gap-3 p-6">
+              <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+
+              <div>
+                <p className="text-sm font-semibold text-danger">
+                  Unable to load transaction history
+                </p>
+
+                <p className="mt-1 text-sm text-danger">
+                  {historyError}
+                </p>
+              </div>
+            </div>
+          ) : historyLoading ? (
+            <div className="p-10 text-center text-sm text-ink-muted">
+              Loading transaction history...
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="p-10 text-center">
+              <p className="text-sm font-semibold text-ink">
+                No transactions found
+              </p>
+
+              <p className="mt-1 text-sm text-ink-muted">
+                No inventory movements match the current
+                filters.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead className="border-b border-line bg-surface-muted">
+                  <tr>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Date
+                    </th>
+
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                       Product
-                    </label>
+                    </th>
 
-                    <select
-                      value={transactionProductId}
-                      onChange={(event) =>
-                        setTransactionProductId(
-                          event.target.value
-                        )
-                      }
-                      disabled={savingTransaction}
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
-                    >
-                      <option value="">
-                        Select product
-                      </option>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Warehouse / Location
+                    </th>
 
-                      {activeProducts.map(
-                        (product) => (
-                          <option
-                            key={product.id}
-                            value={product.id}
-                          >
-                            {product.sku} —{" "}
-                            {product.name}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  </div>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Type
+                    </th>
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                      Warehouse
-                    </label>
-
-                    <select
-                      value={
-                        transactionWarehouseFilter
-                      }
-                      onChange={(event) => {
-                        setTransactionWarehouseFilter(
-                          event.target.value
-                        );
-                        setTransactionLocationId(
-                          ""
-                        );
-                      }}
-                      disabled={savingTransaction}
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
-                    >
-                      <option value="">
-                        Select warehouse
-                      </option>
-
-                      {activeWarehouses.map(
-                        (warehouse) => (
-                          <option
-                            key={warehouse.id}
-                            value={warehouse.id}
-                          >
-                            {warehouse.code} —{" "}
-                            {warehouse.name}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                      Warehouse Location
-                    </label>
-
-                    <select
-                      value={
-                        transactionLocationId
-                      }
-                      onChange={(event) =>
-                        setTransactionLocationId(
-                          event.target.value
-                        )
-                      }
-                      disabled={
-                        savingTransaction ||
-                        !transactionWarehouseFilter
-                      }
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
-                    >
-                      <option value="">
-                        {transactionWarehouseFilter
-                          ? "Select location"
-                          : "Select warehouse first"}
-                      </option>
-
-                      {transactionLocations.map(
-                        (location) => (
-                          <option
-                            key={location.id}
-                            value={location.id}
-                          >
-                            {location.code}
-                            {location.name
-                              ? ` — ${location.name}`
-                              : ""}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
                       Quantity
-                    </label>
+                    </th>
 
-                    <input
-                      type="number"
-                      step="any"
-                      value={transactionQuantity}
-                      onChange={(event) =>
-                        setTransactionQuantity(
-                          event.target.value
-                        )
-                      }
-                      disabled={savingTransaction}
-                      placeholder={
-                        transactionType ===
-                          "ADJUSTMENT" ||
-                        transactionType ===
-                          "STOCKTAKE"
-                          ? "Use negative to decrease"
-                          : "Enter quantity"
-                      }
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
-                    />
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Reference
+                    </th>
 
-                    <p className="mt-1.5 text-xs text-ink-muted">
-                      {transactionType ===
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Notes
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-line">
+                  {filteredTransactions.map(
+                    (transaction) => {
+                      const product =
+                        productMap.get(
+                          transaction.productId
+                        );
+
+                      const location =
+                        locationMap.get(
+                          transaction.warehouseLocationId
+                        );
+
+                      const warehouse = location
+                        ? warehouseMap.get(
+                            location.warehouseId
+                          )
+                        : undefined;
+
+                      return (
+                        <tr
+                          key={transaction.id}
+                          className="transition hover:bg-surface-muted"
+                        >
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <div className="text-sm text-ink">
+                              {formatDateTime(
+                                transaction.createdAt
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <div className="text-sm font-semibold text-ink">
+                              {product?.sku ??
+                                "Unknown product"}
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-ink-muted">
+                              {product?.name ??
+                                transaction.productId}
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <div className="text-sm text-ink">
+                              {warehouse?.code ??
+                                "Unknown warehouse"}
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-ink-muted">
+                              {location?.code ??
+                                transaction.warehouseLocationId}
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span className="inline-flex rounded-full border border-line bg-surface-muted px-2.5 py-1 text-xs font-semibold text-ink">
+                              {formatTransactionType(
+                                transaction.transactionType
+                              )}
+                            </span>
+                          </td>
+
+                          <td
+                            className={`px-5 py-4 text-right text-sm font-bold ${transactionQuantityClass(
+                              transaction.quantity
+                            )}`}
+                          >
+                            {transaction.quantity > 0
+                              ? "+"
+                              : ""}
+
+                            {formatQuantity(
+                              transaction.quantity
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            {transaction.referenceType ||
+                            transaction.referenceId ? (
+                              <>
+                                <div className="text-sm text-ink">
+                                  {transaction.referenceType ||
+                                    "Reference"}
+                                </div>
+
+                                {transaction.referenceId && (
+                                  <div className="mt-0.5 max-w-48 truncate text-xs text-ink-muted">
+                                    {
+                                      transaction.referenceId
+                                    }
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-sm text-ink-muted">
+                                —
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="max-w-64 px-5 py-4">
+                            <span className="block truncate text-sm text-ink-muted">
+                              {transaction.notes || "—"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showAdjustmentForm && canAdjust && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface shadow-xl">
+            <div className="flex items-center justify-between border-b border-line px-6 py-5">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">
+                  Record Stock Movement
+                </h2>
+
+                <p className="mt-1 text-sm text-ink-muted">
+                  Create an inventory ledger transaction.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAdjustmentForm}
+                disabled={savingTransaction}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-5 p-6">
+              {transactionError && (
+                <div className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+                  {transactionError}
+                </div>
+              )}
+
+              {transactionSuccess && (
+                <div className="rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm text-success">
+                  {transactionSuccess}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">
+                  Transaction Type
+                </label>
+
+                <select
+                  value={transactionType}
+                  onChange={(event) =>
+                    setTransactionType(
+                      event.target
+                        .value as InventoryTransactionType
+                    )
+                  }
+                  disabled={savingTransaction}
+                  className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                >
+                  {transactionTypeOptions.map(
+                    (option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {option.label}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  {
+                    transactionTypeOptions.find(
+                      (option) =>
+                        option.value ===
+                        transactionType
+                    )?.description
+                  }
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Product
+                  </label>
+
+                  <select
+                    value={transactionProductId}
+                    onChange={(event) =>
+                      setTransactionProductId(
+                        event.target.value
+                      )
+                    }
+                    disabled={savingTransaction}
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                  >
+                    <option value="">
+                      Select product
+                    </option>
+
+                    {activeProducts.map((product) => (
+                      <option
+                        key={product.id}
+                        value={product.id}
+                      >
+                        {product.sku} — {product.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    step="any"
+                    value={transactionQuantity}
+                    onChange={(event) =>
+                      setTransactionQuantity(
+                        event.target.value
+                      )
+                    }
+                    disabled={savingTransaction}
+                    placeholder={
+                      transactionType ===
                         "ADJUSTMENT" ||
                       transactionType ===
                         "STOCKTAKE"
-                        ? "Positive increases stock; negative decreases stock."
-                        : "Enter a positive quantity."}
-                    </p>
-                  </div>
+                        ? "Use negative to reduce stock"
+                        : "Enter quantity"
+                    }
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                  />
+                </div>
+              </div>
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                      Reference Type
-                    </label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Warehouse
+                  </label>
 
-                    <input
-                      type="text"
-                      value={referenceType}
-                      onChange={(event) =>
-                        setReferenceType(
-                          event.target.value
-                        )
-                      }
-                      disabled={savingTransaction}
-                      placeholder="e.g. STOCKTAKE, DAMAGE"
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
-                    />
-                  </div>
+                  <select
+                    value={transactionWarehouseFilter}
+                    onChange={(event) => {
+                      setTransactionWarehouseFilter(
+                        event.target.value
+                      );
+                      setTransactionLocationId("");
+                    }}
+                    disabled={savingTransaction}
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                  >
+                    <option value="">
+                      Select warehouse
+                    </option>
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                      Reference ID
-                    </label>
-
-                    <input
-                      type="text"
-                      value={referenceId}
-                      onChange={(event) =>
-                        setReferenceId(
-                          event.target.value
-                        )
-                      }
-                      disabled={savingTransaction}
-                      placeholder="Optional UUID"
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
-                    />
-                  </div>
+                    {activeWarehouses.map(
+                      (warehouse) => (
+                        <option
+                          key={warehouse.id}
+                          value={warehouse.id}
+                        >
+                          {warehouse.code} —{" "}
+                          {warehouse.name}
+                        </option>
+                      )
+                    )}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                    Notes
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Warehouse Location
                   </label>
 
-                  <textarea
-                    value={notes}
+                  <select
+                    value={transactionLocationId}
                     onChange={(event) =>
-                      setNotes(event.target.value)
+                      setTransactionLocationId(
+                        event.target.value
+                      )
                     }
                     disabled={savingTransaction}
-                    rows={4}
-                    placeholder="Optional notes about this stock movement..."
-                    className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                  >
+                    <option value="">
+                      Select location
+                    </option>
+
+                    {transactionLocations.map(
+                      (location) => (
+                        <option
+                          key={location.id}
+                          value={location.id}
+                        >
+                          {location.code}
+                          {location.name
+                            ? ` — ${location.name}`
+                            : ""}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {selectedTransactionProduct && (
+                <div className="rounded-lg border border-line bg-surface-muted px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Selected Product
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-ink">
+                    {selectedTransactionProduct.sku} —{" "}
+                    {selectedTransactionProduct.name}
+                  </p>
+                </div>
+              )}
+
+              {selectedTransactionWarehouse &&
+                selectedTransactionLocation && (
+                  <div className="rounded-lg border border-line bg-surface-muted px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Destination
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-ink">
+                      {selectedTransactionWarehouse.code}{" "}
+                      —{" "}
+                      {selectedTransactionLocation.code}
+                    </p>
+                  </div>
+                )}
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Reference Type
+                  </label>
+
+                  <input
+                    value={referenceType}
+                    onChange={(event) =>
+                      setReferenceType(
+                        event.target.value
+                      )
+                    }
+                    disabled={savingTransaction}
+                    placeholder="e.g. Purchase Order"
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
                   />
                 </div>
 
-                {selectedTransactionProduct &&
-                  selectedTransactionLocation && (
-                    <div className="rounded-lg border border-line bg-surface-hover px-4 py-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Movement Summary
-                      </p>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Reference ID
+                  </label>
 
-                      <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
-                        <div>
-                          <span className="text-ink-muted">
-                            Product
-                          </span>
+                  <input
+                    value={referenceId}
+                    onChange={(event) =>
+                      setReferenceId(
+                        event.target.value
+                      )
+                    }
+                    disabled={savingTransaction}
+                    placeholder="UUID reference"
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                  />
 
-                          <p className="font-medium text-ink">
-                            {
-                              selectedTransactionProduct.sku
-                            }
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-ink-muted">
-                            Warehouse
-                          </span>
-
-                          <p className="font-medium text-ink">
-                            {
-                              selectedTransactionWarehouse?.code ??
-                              "—"
-                            }
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-ink-muted">
-                            Location
-                          </span>
-
-                          <p className="font-medium text-ink">
-                            {
-                              selectedTransactionLocation.code
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <p className="mt-1 text-xs text-ink-muted">
+                    If provided, this must be a valid UUID.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex flex-col-reverse gap-3 border-t border-line px-6 py-5 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeAdjustmentForm}
-                  disabled={savingTransaction}
-                  className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">
+                  Notes
+                </label>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    void handleCreateTransaction()
+                <textarea
+                  value={notes}
+                  onChange={(event) =>
+                    setNotes(event.target.value)
                   }
                   disabled={savingTransaction}
-                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {savingTransaction
-                    ? "Saving..."
-                    : "Record Movement"}
-                </button>
+                  rows={3}
+                  placeholder="Optional explanation for this movement"
+                  className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-500"
+                />
               </div>
             </div>
+
+            <div className="flex justify-end gap-3 border-t border-line px-6 py-4">
+              <button
+                type="button"
+                onClick={closeAdjustmentForm}
+                disabled={savingTransaction}
+                className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCreateTransaction}
+                disabled={savingTransaction}
+                className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingTransaction
+                  ? "Saving..."
+                  : "Record Movement"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </AppShell>
   );
 }
