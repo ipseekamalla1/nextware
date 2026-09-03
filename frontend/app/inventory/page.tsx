@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -205,10 +206,12 @@ export default function InventoryPage() {
   const [savingTransaction, setSavingTransaction] =
     useState(false);
 
+  /*
+   * The effect only starts the asynchronous backend operation.
+   * It does not synchronously update React state from the effect body.
+   */
   useEffect(() => {
     if (!canView || !companyId) {
-      setLoading(false);
-      setHistoryLoading(false);
       return;
     }
 
@@ -521,8 +524,67 @@ export default function InventoryPage() {
     historyWarehouseFilter,
   ]);
 
+  /*
+   * Derived filter values.
+   *
+   * We intentionally do NOT call setState when a warehouse changes.
+   * If a previously selected location is no longer valid,
+   * these values simply become empty strings during rendering.
+   */
+  const effectiveLocationFilter = useMemo(() => {
+    if (
+      locationFilter &&
+      !filteredLocations.some(
+        (location) => location.id === locationFilter
+      )
+    ) {
+      return "";
+    }
+
+    return locationFilter;
+  }, [
+    locationFilter,
+    filteredLocations,
+  ]);
+
+  const effectiveTransactionLocationId = useMemo(() => {
+    if (
+      transactionLocationId &&
+      !transactionLocations.some(
+        (location) =>
+          location.id === transactionLocationId
+      )
+    ) {
+      return "";
+    }
+
+    return transactionLocationId;
+  }, [
+    transactionLocationId,
+    transactionLocations,
+  ]);
+
+  const effectiveHistoryLocationFilter = useMemo(() => {
+    if (
+      historyLocationFilter &&
+      !historyLocations.some(
+        (location) =>
+          location.id === historyLocationFilter
+      )
+    ) {
+      return "";
+    }
+
+    return historyLocationFilter;
+  }, [
+    historyLocationFilter,
+    historyLocations,
+  ]);
+
   const selectedTransactionLocation =
-    locationMap.get(transactionLocationId);
+    locationMap.get(
+      effectiveTransactionLocationId
+    );
 
   const selectedTransactionWarehouse =
     selectedTransactionLocation
@@ -578,9 +640,9 @@ export default function InventoryPage() {
           warehouseFilter;
 
       const matchesLocation =
-        locationFilter === "" ||
+        effectiveLocationFilter === "" ||
         row.warehouseLocationId ===
-          locationFilter;
+          effectiveLocationFilter;
 
       return (
         matchesSearch &&
@@ -594,7 +656,7 @@ export default function InventoryPage() {
     search,
     productFilter,
     warehouseFilter,
-    locationFilter,
+    effectiveLocationFilter,
   ]);
 
   const totals = useMemo(() => {
@@ -669,9 +731,9 @@ export default function InventoryPage() {
           historyWarehouseFilter;
 
       const matchesLocation =
-        historyLocationFilter === "" ||
+        effectiveHistoryLocationFilter === "" ||
         transaction.warehouseLocationId ===
-          historyLocationFilter;
+          effectiveHistoryLocationFilter;
 
       const matchesType =
         historyTypeFilter === "" ||
@@ -694,49 +756,8 @@ export default function InventoryPage() {
     historySearch,
     historyProductFilter,
     historyWarehouseFilter,
-    historyLocationFilter,
+    effectiveHistoryLocationFilter,
     historyTypeFilter,
-  ]);
-
-  useEffect(() => {
-    if (
-      locationFilter &&
-      !filteredLocations.some(
-        (location) => location.id === locationFilter
-      )
-    ) {
-      setLocationFilter("");
-    }
-  }, [filteredLocations, locationFilter]);
-
-  useEffect(() => {
-    if (
-      transactionLocationId &&
-      !transactionLocations.some(
-        (location) =>
-          location.id === transactionLocationId
-      )
-    ) {
-      setTransactionLocationId("");
-    }
-  }, [
-    transactionLocations,
-    transactionLocationId,
-  ]);
-
-  useEffect(() => {
-    if (
-      historyLocationFilter &&
-      !historyLocations.some(
-        (location) =>
-          location.id === historyLocationFilter
-      )
-    ) {
-      setHistoryLocationFilter("");
-    }
-  }, [
-    historyLocations,
-    historyLocationFilter,
   ]);
 
   if (!canView) {
@@ -744,14 +765,22 @@ export default function InventoryPage() {
       <AppShell>
         <div className="p-6 lg:p-8">
           <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
-            <p className="text-sm font-semibold text-danger">
-              Access denied
-            </p>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0 text-danger">
+                <AlertIcon />
+              </div>
 
-            <p className="mt-1 text-sm text-danger">
-              You do not have permission to view
-              inventory.
-            </p>
+              <div>
+                <p className="text-sm font-semibold text-danger">
+                  Access denied
+                </p>
+
+                <p className="mt-1 text-sm text-danger">
+                  You do not have permission to view
+                  inventory.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </AppShell>
@@ -763,14 +792,22 @@ export default function InventoryPage() {
       <AppShell>
         <div className="p-6 lg:p-8">
           <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10">
-            <p className="text-sm font-semibold text-danger">
-              Company context unavailable
-            </p>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0 text-danger">
+                <AlertIcon />
+              </div>
 
-            <p className="mt-1 text-sm text-danger">
-              Your authenticated company could not
-              be determined. Please sign in again.
-            </p>
+              <div>
+                <p className="text-sm font-semibold text-danger">
+                  Company context unavailable
+                </p>
+
+                <p className="mt-1 text-sm text-danger">
+                  Your authenticated company could not
+                  be determined. Please sign in again.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </AppShell>
@@ -854,9 +891,9 @@ export default function InventoryPage() {
               </div>
 
               <div className="relative w-full lg:w-80">
-                <SearchIcon
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
-                />
+  <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
+    <SearchIcon />
+  </div>
 
                 <input
                   value={search}
@@ -912,7 +949,7 @@ export default function InventoryPage() {
               </select>
 
               <select
-                value={locationFilter}
+                value={effectiveLocationFilter}
                 onChange={(event) =>
                   setLocationFilter(event.target.value)
                 }
@@ -937,7 +974,9 @@ export default function InventoryPage() {
 
           {error ? (
             <div className="flex items-start gap-3 p-6">
-              <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+              <div className="mt-0.5 shrink-0 text-danger">
+                <AlertIcon />
+              </div>
 
               <div>
                 <p className="text-sm font-semibold text-danger">
@@ -1072,9 +1111,9 @@ export default function InventoryPage() {
               </div>
 
               <div className="relative w-full lg:w-80">
-                <SearchIcon
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
-                />
+  <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
+    <SearchIcon />
+  </div>
 
                 <input
                   value={historySearch}
@@ -1132,7 +1171,7 @@ export default function InventoryPage() {
               </select>
 
               <select
-                value={historyLocationFilter}
+                value={effectiveHistoryLocationFilter}
                 onChange={(event) =>
                   setHistoryLocationFilter(
                     event.target.value
@@ -1179,7 +1218,9 @@ export default function InventoryPage() {
 
           {historyError ? (
             <div className="flex items-start gap-3 p-6">
-              <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+              <div className="mt-0.5 shrink-0 text-danger">
+                <AlertIcon />
+              </div>
 
               <div>
                 <p className="text-sm font-semibold text-danger">
@@ -1535,7 +1576,7 @@ export default function InventoryPage() {
                   </label>
 
                   <select
-                    value={transactionLocationId}
+                    value={effectiveTransactionLocationId}
                     onChange={(event) =>
                       setTransactionLocationId(
                         event.target.value
@@ -1680,3 +1721,4 @@ export default function InventoryPage() {
     </AppShell>
   );
 }
+
