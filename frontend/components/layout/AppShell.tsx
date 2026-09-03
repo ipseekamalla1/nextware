@@ -98,7 +98,8 @@ const navigation: {
         label: "Warehouse Locations",
         icon: WarehouseIcon,
         href: "/warehouse-locations",
-        permission: "WAREHOUSE_LOCATION_VIEW",
+        permission:
+          "WAREHOUSE_LOCATION_VIEW",
       },
       {
         label: "Company",
@@ -116,27 +117,28 @@ const navigation: {
         icon: LayersIcon,
         href: "/inventory",
         permission: "INVENTORY_VIEW",
-    
       },
       {
         label: "Purchasing",
         icon: CartDownIcon,
         href: "/purchasing",
-        permission: "PURCHASE_ORDER_CREATE",
-        soon: true,
+        permission:
+          "PURCHASE_ORDER_CREATE",
       },
       {
         label: "Sales",
         icon: CartUpIcon,
         href: "/sales",
-        permission: "SALES_ORDER_CREATE",
+        permission:
+          "SALES_ORDER_CREATE",
         soon: true,
       },
       {
         label: "Fulfillment",
         icon: PackageCheckIcon,
         href: "/fulfillment",
-        permission: "SALES_ORDER_CREATE",
+        permission:
+          "SALES_ORDER_CREATE",
         soon: true,
       },
     ],
@@ -166,7 +168,9 @@ const navigation: {
 ];
 
 const pageTitles: {
-  match: (path: string) => boolean;
+  match: (
+    path: string
+  ) => boolean;
   title: string;
   description: string;
 }[] = [
@@ -179,85 +183,103 @@ const pageTitles: {
     match: (p) =>
       p.startsWith("/products"),
     title: "Products",
-    description: "Product master data",
+    description:
+      "Product master data",
   },
   {
     match: (p) =>
       p.startsWith("/categories"),
     title: "Categories",
-    description: "Category master data",
+    description:
+      "Category master data",
   },
   {
     match: (p) =>
       p.startsWith("/customers"),
     title: "Customers",
-    description: "Customer master data",
+    description:
+      "Customer master data",
   },
   {
     match: (p) =>
       p.startsWith("/suppliers"),
     title: "Suppliers",
-    description: "Supplier master data",
+    description:
+      "Supplier master data",
   },
   {
     match: (p) =>
       p.startsWith("/units"),
     title: "Units of Measure",
-    description: "Unit of measure master data",
+    description:
+      "Unit of measure master data",
   },
   {
     match: (p) =>
       p.startsWith("/company"),
     title: "Company",
-    description: "Company master data",
+    description:
+      "Company master data",
   },
   {
     match: (p) =>
       p.startsWith("/inventory"),
     title: "Inventory",
-    description: "Nextware ERP & WMS",
+    description:
+      "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/warehouses"),
     title: "Warehouses",
-    description: "Warehouse master data",
+    description:
+      "Warehouse master data",
   },
   {
     match: (p) =>
-      p.startsWith("/warehouse-locations"),
+      p.startsWith(
+        "/warehouse-locations"
+      ),
     title: "Warehouse Locations",
-    description: "Warehouse location master data",
+    description:
+      "Warehouse location master data",
   },
   {
     match: (p) =>
       p.startsWith("/purchasing"),
     title: "Purchasing",
-    description: "Nextware ERP & WMS",
+    description:
+      "Purchase orders and receiving",
   },
   {
     match: (p) =>
       p.startsWith("/sales"),
     title: "Sales",
-    description: "Nextware ERP & WMS",
+    description:
+      "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/fulfillment"),
     title: "Fulfillment",
-    description: "Nextware ERP & WMS",
+    description:
+      "Nextware ERP & WMS",
   },
   {
     match: (p) =>
       p.startsWith("/reports"),
     title: "Reports",
-    description: "Nextware ERP & WMS",
+    description:
+      "Nextware ERP & WMS",
   },
   {
     match: (p) =>
-      p.startsWith("/administration"),
+      p.startsWith(
+        "/administration"
+      ),
     title: "Administration",
-    description: "Nextware ERP & WMS",
+    description:
+      "Nextware ERP & WMS",
   },
 ];
 
@@ -393,19 +415,24 @@ export default function AppShell({
                 );
 
               if (
-                visibleItems.length === 0
+                visibleItems.length ===
+                0
               ) {
                 return null;
               }
 
               return (
                 <div
-                  key={group.section}
+                  key={
+                    group.section
+                  }
                   className="mb-6"
                 >
                   {!sidebarCollapsed && (
                     <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-                      {group.section}
+                      {
+                        group.section
+                      }
                     </div>
                   )}
 
@@ -413,8 +440,10 @@ export default function AppShell({
                     {visibleItems.map(
                       (item) => {
                         const isActive =
-                          item.href === "/"
-                            ? pathname === "/"
+                          item.href ===
+                          "/"
+                            ? pathname ===
+                              "/"
                             : pathname ===
                                 item.href ||
                               pathname.startsWith(
@@ -594,11 +623,15 @@ export default function AppShell({
 
             <div>
               <div className="text-sm font-semibold text-ink">
-                {pageMeta.title}
+                {
+                  pageMeta.title
+                }
               </div>
 
               <div className="text-xs text-ink-muted">
-                {pageMeta.description}
+                {
+                  pageMeta.description
+                }
               </div>
             </div>
           </div>
@@ -609,7 +642,9 @@ export default function AppShell({
             <div
               className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-600 text-xs font-semibold text-white"
               aria-label={`Signed in as ${displayName}`}
-              title={displayName}
+              title={
+                displayName
+              }
             >
               {initials}
             </div>
