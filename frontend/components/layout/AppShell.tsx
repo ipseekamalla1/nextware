@@ -116,7 +116,7 @@ const navigation: {
         icon: LayersIcon,
         href: "/inventory",
         permission: "INVENTORY_VIEW",
-        soon: true,
+    
       },
       {
         label: "Purchasing",
