@@ -13,8 +13,12 @@ import {
   WarehouseLocation,
 } from "@/lib/api";
 import {
+  createInventoryTransaction,
   getInventoryBalances,
+  getInventoryTransactions,
   InventoryBalance,
+  InventoryTransaction,
+  InventoryTransactionType,
 } from "@/lib/inventoryApi";
 
 interface InventoryRow extends InventoryBalance {
@@ -23,9 +27,48 @@ interface InventoryRow extends InventoryBalance {
   location: WarehouseLocation | null;
 }
 
+const transactionTypeOptions: {
+  value: InventoryTransactionType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "RECEIPT",
+    label: "Receipt",
+    description: "Add stock received into inventory.",
+  },
+  {
+    value: "RETURN",
+    label: "Return",
+    description: "Add stock returned to inventory.",
+  },
+  {
+    value: "ADJUSTMENT",
+    label: "Adjustment",
+    description: "Increase or decrease inventory by a signed quantity.",
+  },
+  {
+    value: "STOCKTAKE",
+    label: "Stocktake",
+    description: "Record a signed stocktake difference.",
+  },
+  {
+    value: "DAMAGE",
+    label: "Damage",
+    description: "Remove damaged stock from inventory.",
+  },
+  {
+    value: "SHIPMENT",
+    label: "Shipment",
+    description: "Remove stock shipped from inventory.",
+  },
+];
+
 export default function InventoryPage() {
   const companyId = getCurrentCompanyId();
+
   const canView = hasPermission("INVENTORY_VIEW");
+  const canAdjust = hasPermission("INVENTORY_ADJUST");
 
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -37,8 +80,46 @@ export default function InventoryPage() {
   const [warehouseFilter, setWarehouseFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
 
+  const [showAdjustmentForm, setShowAdjustmentForm] =
+    useState(false);
+
+  const [transactionType, setTransactionType] =
+    useState<InventoryTransactionType>("ADJUSTMENT");
+
+  const [transactionProductId, setTransactionProductId] =
+    useState("");
+
+  const [
+    transactionWarehouseFilter,
+    setTransactionWarehouseFilter,
+  ] = useState("");
+
+  const [transactionLocationId, setTransactionLocationId] =
+    useState("");
+
+  const [transactionQuantity, setTransactionQuantity] =
+    useState("");
+
+  const [referenceType, setReferenceType] =
+    useState("");
+
+  const [referenceId, setReferenceId] =
+    useState("");
+
+  const [notes, setNotes] = useState("");
+
+  const [transactionError, setTransactionError] =
+    useState<string | null>(null);
+
+  const [transactionSuccess, setTransactionSuccess] =
+    useState<string | null>(null);
+
+  const [savingTransaction, setSavingTransaction] =
+    useState(false);
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     if (!canView || !companyId) {
@@ -58,34 +139,38 @@ export default function InventoryPage() {
       setLoading(true);
       setError(null);
 
-      const [productData, warehouseData] = await Promise.all([
-        getProducts(companyId),
-        getWarehouses(companyId),
-      ]);
+      const [productData, warehouseData] =
+        await Promise.all([
+          getProducts(companyId),
+          getWarehouses(companyId),
+        ]);
 
-      const activeWarehouses = warehouseData.filter(
-        (warehouse) => warehouse.active
-      );
+      const activeWarehouses =
+        warehouseData.filter(
+          (warehouse) => warehouse.active
+        );
 
-      const locationResults = await Promise.all(
-        activeWarehouses.map((warehouse) =>
-          getWarehouseLocations(warehouse.id)
-        )
-      );
+      const locationResults =
+        await Promise.all(
+          activeWarehouses.map((warehouse) =>
+            getWarehouseLocations(warehouse.id)
+          )
+        );
 
       const allLocations = locationResults
         .flat()
         .filter((location) => location.active);
 
-      const balanceResults = await Promise.all(
-        allLocations.map((location) =>
-          getInventoryBalances(
-            companyId,
-            undefined,
-            location.id
+      const balanceResults =
+        await Promise.all(
+          allLocations.map((location) =>
+            getInventoryBalances(
+              companyId,
+              undefined,
+              location.id
+            )
           )
-        )
-      );
+        );
 
       setProducts(productData);
       setWarehouses(warehouseData);
@@ -102,21 +187,150 @@ export default function InventoryPage() {
     }
   }
 
+  function resetTransactionForm() {
+    setTransactionType("ADJUSTMENT");
+    setTransactionProductId("");
+    setTransactionWarehouseFilter("");
+    setTransactionLocationId("");
+    setTransactionQuantity("");
+    setReferenceType("");
+    setReferenceId("");
+    setNotes("");
+    setTransactionError(null);
+    setTransactionSuccess(null);
+  }
+
+  function openAdjustmentForm() {
+    resetTransactionForm();
+    setShowAdjustmentForm(true);
+  }
+
+  function closeAdjustmentForm() {
+    if (savingTransaction) {
+      return;
+    }
+
+    setShowAdjustmentForm(false);
+    resetTransactionForm();
+  }
+
+  async function handleCreateTransaction() {
+    if (!companyId) {
+      setTransactionError(
+        "Company context is unavailable. Please sign in again."
+      );
+      return;
+    }
+
+    if (!transactionProductId) {
+      setTransactionError("Product is required.");
+      return;
+    }
+
+    if (!transactionLocationId) {
+      setTransactionError(
+        "Warehouse location is required."
+      );
+      return;
+    }
+
+    if (!transactionQuantity.trim()) {
+      setTransactionError("Quantity is required.");
+      return;
+    }
+
+    const parsedQuantity =
+      Number(transactionQuantity);
+
+    if (!Number.isFinite(parsedQuantity)) {
+      setTransactionError(
+        "Quantity must be a valid number."
+      );
+      return;
+    }
+
+    if (parsedQuantity === 0) {
+      setTransactionError(
+        "Quantity cannot be zero."
+      );
+      return;
+    }
+
+    if (
+      transactionType !== "ADJUSTMENT" &&
+      transactionType !== "STOCKTAKE" &&
+      parsedQuantity < 0
+    ) {
+      setTransactionError(
+        "Quantity must be positive for this transaction type."
+      );
+      return;
+    }
+
+    try {
+      setSavingTransaction(true);
+      setTransactionError(null);
+      setTransactionSuccess(null);
+
+      await createInventoryTransaction({
+        companyId,
+        productId: transactionProductId,
+        warehouseLocationId:
+          transactionLocationId,
+        transactionType,
+        quantity: parsedQuantity,
+        referenceType:
+          referenceType.trim() || null,
+        referenceId:
+          referenceId.trim() || null,
+        notes: notes.trim() || null,
+      });
+
+      setTransactionSuccess(
+        "Inventory transaction recorded successfully."
+      );
+
+      await loadInventory();
+
+      setTimeout(() => {
+        setShowAdjustmentForm(false);
+        resetTransactionForm();
+      }, 700);
+    } catch (err) {
+      setTransactionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create inventory transaction."
+      );
+    } finally {
+      setSavingTransaction(false);
+    }
+  }
+
   const productMap = useMemo(() => {
     return new Map(
-      products.map((product) => [product.id, product])
+      products.map((product) => [
+        product.id,
+        product,
+      ])
     );
   }, [products]);
 
   const warehouseMap = useMemo(() => {
     return new Map(
-      warehouses.map((warehouse) => [warehouse.id, warehouse])
+      warehouses.map((warehouse) => [
+        warehouse.id,
+        warehouse,
+      ])
     );
   }, [warehouses]);
 
   const locationMap = useMemo(() => {
     return new Map(
-      locations.map((location) => [location.id, location])
+      locations.map((location) => [
+        location.id,
+        location,
+      ])
     );
   }, [locations]);
 
@@ -126,10 +340,14 @@ export default function InventoryPage() {
         productMap.get(balance.productId) ?? null;
 
       const location =
-        locationMap.get(balance.warehouseLocationId) ?? null;
+        locationMap.get(
+          balance.warehouseLocationId
+        ) ?? null;
 
       const warehouse = location
-        ? warehouseMap.get(location.warehouseId) ?? null
+        ? warehouseMap.get(
+            location.warehouseId
+          ) ?? null
         : null;
 
       return {
@@ -149,13 +367,17 @@ export default function InventoryPage() {
   const activeProducts = useMemo(() => {
     return products
       .filter((product) => product.active)
-      .sort((a, b) => a.sku.localeCompare(b.sku));
+      .sort((a, b) =>
+        a.sku.localeCompare(b.sku)
+      );
   }, [products]);
 
   const activeWarehouses = useMemo(() => {
     return warehouses
       .filter((warehouse) => warehouse.active)
-      .sort((a, b) => a.code.localeCompare(b.code));
+      .sort((a, b) =>
+        a.code.localeCompare(b.code)
+      );
   }, [warehouses]);
 
   const filteredLocations = useMemo(() => {
@@ -165,13 +387,52 @@ export default function InventoryPage() {
           return true;
         }
 
-        return location.warehouseId === warehouseFilter;
+        return (
+          location.warehouseId ===
+          warehouseFilter
+        );
       })
-      .sort((a, b) => a.code.localeCompare(b.code));
+      .sort((a, b) =>
+        a.code.localeCompare(b.code)
+      );
   }, [locations, warehouseFilter]);
 
+  const transactionLocations = useMemo(() => {
+    return locations
+      .filter((location) => {
+        if (!transactionWarehouseFilter) {
+          return true;
+        }
+
+        return (
+          location.warehouseId ===
+          transactionWarehouseFilter
+        );
+      })
+      .sort((a, b) =>
+        a.code.localeCompare(b.code)
+      );
+  }, [
+    locations,
+    transactionWarehouseFilter,
+  ]);
+
+  const selectedTransactionLocation =
+    locationMap.get(transactionLocationId);
+
+  const selectedTransactionWarehouse =
+    selectedTransactionLocation
+      ? warehouseMap.get(
+          selectedTransactionLocation.warehouseId
+        )
+      : null;
+
+  const selectedTransactionProduct =
+    productMap.get(transactionProductId);
+
   const filteredRows = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch =
+      search.trim().toLowerCase();
 
     return rows.filter((row) => {
       const productSearch = [
@@ -199,9 +460,15 @@ export default function InventoryPage() {
 
       const matchesSearch =
         normalizedSearch === "" ||
-        productSearch.includes(normalizedSearch) ||
-        warehouseSearch.includes(normalizedSearch) ||
-        locationSearch.includes(normalizedSearch);
+        productSearch.includes(
+          normalizedSearch
+        ) ||
+        warehouseSearch.includes(
+          normalizedSearch
+        ) ||
+        locationSearch.includes(
+          normalizedSearch
+        );
 
       const matchesProduct =
         productFilter === "" ||
@@ -209,11 +476,13 @@ export default function InventoryPage() {
 
       const matchesWarehouse =
         warehouseFilter === "" ||
-        row.location?.warehouseId === warehouseFilter;
+        row.location?.warehouseId ===
+          warehouseFilter;
 
       const matchesLocation =
         locationFilter === "" ||
-        row.warehouseLocationId === locationFilter;
+        row.warehouseLocationId ===
+          locationFilter;
 
       return (
         matchesSearch &&
@@ -236,9 +505,11 @@ export default function InventoryPage() {
         quantity:
           summary.quantity + row.quantity,
         reserved:
-          summary.reserved + row.reservedQuantity,
+          summary.reserved +
+          row.reservedQuantity,
         available:
-          summary.available + row.availableQuantity,
+          summary.available +
+          row.availableQuantity,
       }),
       {
         quantity: 0,
@@ -252,12 +523,32 @@ export default function InventoryPage() {
     if (
       locationFilter &&
       !filteredLocations.some(
-        (location) => location.id === locationFilter
+        (location) =>
+          location.id === locationFilter
       )
     ) {
       setLocationFilter("");
     }
-  }, [filteredLocations, locationFilter]);
+  }, [
+    filteredLocations,
+    locationFilter,
+  ]);
+
+  useEffect(() => {
+    if (
+      transactionLocationId &&
+      !transactionLocations.some(
+        (location) =>
+          location.id ===
+          transactionLocationId
+      )
+    ) {
+      setTransactionLocationId("");
+    }
+  }, [
+    transactionLocations,
+    transactionLocationId,
+  ]);
 
   if (!canView) {
     return (
@@ -269,7 +560,8 @@ export default function InventoryPage() {
             </p>
 
             <p className="mt-1 text-sm text-danger">
-              You do not have permission to view inventory.
+              You do not have permission to view
+              inventory.
             </p>
           </div>
         </div>
@@ -287,8 +579,8 @@ export default function InventoryPage() {
             </p>
 
             <p className="mt-1 text-sm text-danger">
-              Your authenticated company could not be
-              determined. Please sign in again.
+              Your authenticated company could not
+              be determined. Please sign in again.
             </p>
           </div>
         </div>
@@ -299,19 +591,31 @@ export default function InventoryPage() {
   return (
     <AppShell>
       <div className="p-6 lg:p-8">
-        <div className="mb-6">
-          <div className="mb-1 text-xs font-medium text-ink-muted">
-            Inventory
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-1 text-xs font-medium text-ink-muted">
+              Inventory
+            </div>
+
+            <h1 className="text-2xl font-bold tracking-tight text-ink">
+              Inventory
+            </h1>
+
+            <p className="mt-1 text-sm text-ink-muted">
+              View inventory quantities, reservations
+              and available stock by warehouse location.
+            </p>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-ink">
-            Inventory
-          </h1>
-
-          <p className="mt-1 text-sm text-ink-muted">
-            View inventory quantities, reservations and
-            available stock by warehouse location.
-          </p>
+          {canAdjust && (
+            <button
+              type="button"
+              onClick={openAdjustmentForm}
+              className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+            >
+              Record Stock Movement
+            </button>
+          )}
         </div>
 
         <div className="mb-5 grid gap-4 md:grid-cols-3">
@@ -383,7 +687,9 @@ export default function InventoryPage() {
               }
               className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
-              <option value="">All Products</option>
+              <option value="">
+                All Products
+              </option>
 
               {activeProducts.map((product) => (
                 <option
@@ -398,42 +704,55 @@ export default function InventoryPage() {
             <select
               value={warehouseFilter}
               onChange={(event) =>
-                setWarehouseFilter(event.target.value)
+                setWarehouseFilter(
+                  event.target.value
+                )
               }
               className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
-              <option value="">All Warehouses</option>
+              <option value="">
+                All Warehouses
+              </option>
 
-              {activeWarehouses.map((warehouse) => (
-                <option
-                  key={warehouse.id}
-                  value={warehouse.id}
-                >
-                  {warehouse.code} — {warehouse.name}
-                </option>
-              ))}
+              {activeWarehouses.map(
+                (warehouse) => (
+                  <option
+                    key={warehouse.id}
+                    value={warehouse.id}
+                  >
+                    {warehouse.code} —{" "}
+                    {warehouse.name}
+                  </option>
+                )
+              )}
             </select>
 
             <select
               value={locationFilter}
               onChange={(event) =>
-                setLocationFilter(event.target.value)
+                setLocationFilter(
+                  event.target.value
+                )
               }
               className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
             >
-              <option value="">All Locations</option>
+              <option value="">
+                All Locations
+              </option>
 
-              {filteredLocations.map((location) => (
-                <option
-                  key={location.id}
-                  value={location.id}
-                >
-                  {location.code}
-                  {location.name
-                    ? ` — ${location.name}`
-                    : ""}
-                </option>
-              ))}
+              {filteredLocations.map(
+                (location) => (
+                  <option
+                    key={location.id}
+                    value={location.id}
+                  >
+                    {location.code}
+                    {location.name
+                      ? ` — ${location.name}`
+                      : ""}
+                  </option>
+                )
+              )}
             </select>
           </div>
         </div>
@@ -551,15 +870,9 @@ export default function InventoryPage() {
                               </p>
                             </div>
                           ) : (
-                            <div>
-                              <p className="font-mono text-sm font-medium text-ink-secondary">
-                                {row.productId}
-                              </p>
-
-                              <p className="mt-0.5 text-xs text-ink-muted">
-                                Product unavailable
-                              </p>
-                            </div>
+                            <span className="font-mono text-sm text-ink-secondary">
+                              {row.productId}
+                            </span>
                           )}
                         </td>
 
@@ -655,6 +968,370 @@ export default function InventoryPage() {
               </div>
             </div>
           )}
+
+        {showAdjustmentForm && canAdjust && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-line bg-surface shadow-xl">
+              <div className="flex items-start justify-between border-b border-line px-6 py-5">
+                <div>
+                  <h2 className="text-lg font-bold text-ink">
+                    Record Stock Movement
+                  </h2>
+
+                  <p className="mt-1 text-sm text-ink-muted">
+                    Record an inventory transaction for a
+                    product and warehouse location.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeAdjustmentForm}
+                  disabled={savingTransaction}
+                  className="rounded-lg px-2 py-1 text-xl text-ink-muted transition hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-5 px-6 py-6">
+                {transactionError && (
+                  <div className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3">
+                    <p className="text-sm font-medium text-danger">
+                      {transactionError}
+                    </p>
+                  </div>
+                )}
+
+                {transactionSuccess && (
+                  <div className="rounded-lg border border-success/30 bg-success-soft px-4 py-3">
+                    <p className="text-sm font-medium text-success">
+                      {transactionSuccess}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Transaction Type
+                    </label>
+
+                    <select
+                      value={transactionType}
+                      onChange={(event) =>
+                        setTransactionType(
+                          event.target
+                            .value as InventoryTransactionType
+                        )
+                      }
+                      disabled={savingTransaction}
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
+                    >
+                      {transactionTypeOptions.map(
+                        (option) => (
+                          <option
+                            key={option.value}
+                            value={option.value}
+                          >
+                            {option.label}
+                          </option>
+                        )
+                      )}
+                    </select>
+
+                    <p className="mt-1.5 text-xs text-ink-muted">
+                      {
+                        transactionTypeOptions.find(
+                          (option) =>
+                            option.value ===
+                            transactionType
+                        )?.description
+                      }
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Product
+                    </label>
+
+                    <select
+                      value={transactionProductId}
+                      onChange={(event) =>
+                        setTransactionProductId(
+                          event.target.value
+                        )
+                      }
+                      disabled={savingTransaction}
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
+                    >
+                      <option value="">
+                        Select product
+                      </option>
+
+                      {activeProducts.map(
+                        (product) => (
+                          <option
+                            key={product.id}
+                            value={product.id}
+                          >
+                            {product.sku} —{" "}
+                            {product.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Warehouse
+                    </label>
+
+                    <select
+                      value={
+                        transactionWarehouseFilter
+                      }
+                      onChange={(event) => {
+                        setTransactionWarehouseFilter(
+                          event.target.value
+                        );
+                        setTransactionLocationId(
+                          ""
+                        );
+                      }}
+                      disabled={savingTransaction}
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
+                    >
+                      <option value="">
+                        Select warehouse
+                      </option>
+
+                      {activeWarehouses.map(
+                        (warehouse) => (
+                          <option
+                            key={warehouse.id}
+                            value={warehouse.id}
+                          >
+                            {warehouse.code} —{" "}
+                            {warehouse.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Warehouse Location
+                    </label>
+
+                    <select
+                      value={
+                        transactionLocationId
+                      }
+                      onChange={(event) =>
+                        setTransactionLocationId(
+                          event.target.value
+                        )
+                      }
+                      disabled={
+                        savingTransaction ||
+                        !transactionWarehouseFilter
+                      }
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400 disabled:opacity-50"
+                    >
+                      <option value="">
+                        {transactionWarehouseFilter
+                          ? "Select location"
+                          : "Select warehouse first"}
+                      </option>
+
+                      {transactionLocations.map(
+                        (location) => (
+                          <option
+                            key={location.id}
+                            value={location.id}
+                          >
+                            {location.code}
+                            {location.name
+                              ? ` — ${location.name}`
+                              : ""}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Quantity
+                    </label>
+
+                    <input
+                      type="number"
+                      step="any"
+                      value={transactionQuantity}
+                      onChange={(event) =>
+                        setTransactionQuantity(
+                          event.target.value
+                        )
+                      }
+                      disabled={savingTransaction}
+                      placeholder={
+                        transactionType ===
+                          "ADJUSTMENT" ||
+                        transactionType ===
+                          "STOCKTAKE"
+                          ? "Use negative to decrease"
+                          : "Enter quantity"
+                      }
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
+                    />
+
+                    <p className="mt-1.5 text-xs text-ink-muted">
+                      {transactionType ===
+                        "ADJUSTMENT" ||
+                      transactionType ===
+                        "STOCKTAKE"
+                        ? "Positive increases stock; negative decreases stock."
+                        : "Enter a positive quantity."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Reference Type
+                    </label>
+
+                    <input
+                      type="text"
+                      value={referenceType}
+                      onChange={(event) =>
+                        setReferenceType(
+                          event.target.value
+                        )
+                      }
+                      disabled={savingTransaction}
+                      placeholder="e.g. STOCKTAKE, DAMAGE"
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                      Reference ID
+                    </label>
+
+                    <input
+                      type="text"
+                      value={referenceId}
+                      onChange={(event) =>
+                        setReferenceId(
+                          event.target.value
+                        )
+                      }
+                      disabled={savingTransaction}
+                      placeholder="Optional UUID"
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
+                    Notes
+                  </label>
+
+                  <textarea
+                    value={notes}
+                    onChange={(event) =>
+                      setNotes(event.target.value)
+                    }
+                    disabled={savingTransaction}
+                    rows={4}
+                    placeholder="Optional notes about this stock movement..."
+                    className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-400 disabled:opacity-50"
+                  />
+                </div>
+
+                {selectedTransactionProduct &&
+                  selectedTransactionLocation && (
+                    <div className="rounded-lg border border-line bg-surface-hover px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Movement Summary
+                      </p>
+
+                      <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
+                        <div>
+                          <span className="text-ink-muted">
+                            Product
+                          </span>
+
+                          <p className="font-medium text-ink">
+                            {
+                              selectedTransactionProduct.sku
+                            }
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-ink-muted">
+                            Warehouse
+                          </span>
+
+                          <p className="font-medium text-ink">
+                            {
+                              selectedTransactionWarehouse?.code ??
+                              "—"
+                            }
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-ink-muted">
+                            Location
+                          </span>
+
+                          <p className="font-medium text-ink">
+                            {
+                              selectedTransactionLocation.code
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-line px-6 py-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeAdjustmentForm}
+                  disabled={savingTransaction}
+                  className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void handleCreateTransaction()
+                  }
+                  disabled={savingTransaction}
+                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {savingTransaction
+                    ? "Saving..."
+                    : "Record Movement"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );

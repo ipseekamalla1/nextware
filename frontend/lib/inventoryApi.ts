@@ -33,6 +33,17 @@ export interface InventoryTransaction {
   createdAt: string;
 }
 
+export interface CreateInventoryTransactionRequest {
+  companyId: string;
+  productId: string;
+  warehouseLocationId: string;
+  transactionType: InventoryTransactionType;
+  quantity: number;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  notes?: string | null;
+}
+
 async function getErrorMessage(
   response: Response,
   fallback: string
@@ -127,6 +138,32 @@ export async function getInventoryTransactions(
       await getErrorMessage(
         response,
         `Failed to load inventory transactions: ${response.status}`
+      )
+    );
+  }
+
+  return response.json();
+}
+
+export async function createInventoryTransaction(
+  request: CreateInventoryTransactionRequest
+): Promise<InventoryTransaction> {
+  const response = await fetch(
+    "/api/inventory/transactions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to create inventory transaction: ${response.status}`
       )
     );
   }
