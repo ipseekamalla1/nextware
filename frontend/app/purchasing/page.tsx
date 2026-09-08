@@ -1,6 +1,8 @@
+
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -39,10 +41,7 @@ interface DraftLine {
   unitCost: string;
 }
 
-type DialogType =
-  | "submit"
-  | "approve"
-  | null;
+type DialogType = "submit" | "approve" | null;
 
 const statusOptions: {
   value: PurchaseOrderStatus | "";
@@ -78,12 +77,11 @@ const statusOptions: {
   },
 ];
 
-function formatStatus(
-  status: PurchaseOrderStatus
-): string {
+function formatStatus(status: PurchaseOrderStatus): string {
   switch (status) {
     case "PARTIALLY_RECEIVED":
       return "Partially Received";
+
     default:
       return (
         status.charAt(0) +
@@ -92,9 +90,7 @@ function formatStatus(
   }
 }
 
-function statusClass(
-  status: PurchaseOrderStatus
-): string {
+function statusClass(status: PurchaseOrderStatus): string {
   switch (status) {
     case "DRAFT":
       return "bg-surface-active text-ink-secondary";
@@ -119,21 +115,15 @@ function statusClass(
   }
 }
 
-function formatCurrency(
-  value: number
-): string {
+function formatCurrency(value: number): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function formatDate(
-  value: string
-): string {
-  const date = new Date(
-    `${value}T00:00:00`
-  );
+function formatDate(value: string): string {
+  const date = new Date(`${value}T00:00:00`);
 
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -151,21 +141,30 @@ function emptyLine(): DraftLine {
 }
 
 export default function PurchasingPage() {
-  const companyId =
-    getCurrentCompanyId();
+  const companyId = getCurrentCompanyId();
 
-  const canCreate =
-    hasPermission(
-      "PURCHASE_ORDER_CREATE"
-    );
+  const canCreate = hasPermission(
+    "PURCHASE_ORDER_CREATE"
+  );
 
-  const canApprove =
-    hasPermission(
-      "PURCHASE_ORDER_APPROVE"
-    );
+  const canApprove = hasPermission(
+    "PURCHASE_ORDER_APPROVE"
+  );
 
+  /*
+   * IMPORTANT:
+   *
+   * null = data has not finished loading
+   * []   = data finished loading and there are no orders
+   * [...] = data loaded successfully
+   *
+   * This removes the separate loading state and prevents
+   * the React set-state-in-effect warning caused by
+   * synchronously changing loading state from the effect-driven
+   * data-loading flow.
+   */
   const [purchaseOrders, setPurchaseOrders] =
-    useState<PurchaseOrder[]>([]);
+    useState<PurchaseOrder[] | null>(null);
 
   const [suppliers, setSuppliers] =
     useState<Supplier[]>([]);
@@ -173,19 +172,13 @@ export default function PurchasingPage() {
   const [products, setProducts] =
     useState<Product[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
-
   const [error, setError] =
     useState<string | null>(null);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
   const [statusFilter, setStatusFilter] =
-    useState<PurchaseOrderStatus | "">(
-      ""
-    );
+    useState<PurchaseOrderStatus | "">("");
 
   const [supplierFilter, setSupplierFilter] =
     useState("");
@@ -205,26 +198,20 @@ export default function PurchasingPage() {
   const [supplierId, setSupplierId] =
     useState("");
 
-  const [orderDate, setOrderDate] =
-    useState(
-      new Date()
-        .toISOString()
-        .slice(0, 10)
-    );
+  const [orderDate, setOrderDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
 
-  const [notes, setNotes] =
-    useState("");
+  const [notes, setNotes] = useState("");
 
-  const [lines, setLines] =
-    useState<DraftLine[]>([
-      emptyLine(),
-    ]);
+  const [lines, setLines] = useState<DraftLine[]>([
+    emptyLine(),
+  ]);
 
   const [formError, setFormError] =
     useState<string | null>(null);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [dialogType, setDialogType] =
     useState<DialogType>(null);
@@ -235,43 +222,23 @@ export default function PurchasingPage() {
   const [actionLoading, setActionLoading] =
     useState(false);
 
-  const [toast, setToast] =
-    useState<{
-      type: "success" | "error";
-      message: string;
-    } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
-  useEffect(() => {
-    if (!companyId || !canCreate) {
-      setLoading(false);
-      return;
-    }
-
-    void loadData();
-  }, [companyId, canCreate]);
-
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-
-    const timer =
-      window.setTimeout(() => {
-        setToast(null);
-      }, 4000);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [toast]);
-
-  async function loadData() {
+  /*
+   * Data loader.
+   *
+   * No loading state is toggled here.
+   * purchaseOrders being null is the loading indicator.
+   */
+  const loadData = useCallback(async () => {
     if (!companyId || !canCreate) {
       return;
     }
 
     try {
-      setLoading(true);
       setError(null);
 
       const [
@@ -284,37 +251,65 @@ export default function PurchasingPage() {
         getProducts(companyId),
       ]);
 
-      setPurchaseOrders(
-        purchaseOrderData
-      );
-
-      setSuppliers(
-        supplierData
-      );
-
-      setProducts(
-        productData
-      );
+      setPurchaseOrders(purchaseOrderData);
+      setSuppliers(supplierData);
+      setProducts(productData);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Failed to load purchasing data."
       );
-    } finally {
-      setLoading(false);
+
+      /*
+       * Set an empty array so the page does not remain
+       * permanently in the loading state after an error.
+       */
+      setPurchaseOrders([]);
     }
-  }
+  }, [companyId, canCreate]);
+
+  /*
+   * Initial data loading.
+   *
+   * The effect only starts the asynchronous operation.
+   * There is no synchronous setState call directly inside
+   * the effect body.
+   */
+  useEffect(() => {
+    if (!companyId || !canCreate) {
+      return;
+    }
+
+    void loadData();
+  }, [companyId, canCreate, loadData]);
+
+  /*
+   * Toast auto-dismiss.
+   *
+   * State changes only from the asynchronous timer callback.
+   */
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToast(null);
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [toast]);
 
   const supplierMap = useMemo(
     () =>
       new Map(
-        suppliers.map(
-          (supplier) => [
-            supplier.id,
-            supplier,
-          ]
-        )
+        suppliers.map((supplier) => [
+          supplier.id,
+          supplier,
+        ])
       ),
     [suppliers]
   );
@@ -322,12 +317,10 @@ export default function PurchasingPage() {
   const productMap = useMemo(
     () =>
       new Map(
-        products.map(
-          (product) => [
-            product.id,
-            product,
-          ]
-        )
+        products.map((product) => [
+          product.id,
+          product,
+        ])
       ),
     [products]
   );
@@ -335,14 +328,9 @@ export default function PurchasingPage() {
   const activeSuppliers = useMemo(
     () =>
       suppliers
-        .filter(
-          (supplier) =>
-            supplier.active
-        )
+        .filter((supplier) => supplier.active)
         .sort((a, b) =>
-          a.name.localeCompare(
-            b.name
-          )
+          a.name.localeCompare(b.name)
         ),
     [suppliers]
   );
@@ -350,59 +338,50 @@ export default function PurchasingPage() {
   const activeProducts = useMemo(
     () =>
       products
-        .filter(
-          (product) =>
-            product.active
-        )
+        .filter((product) => product.active)
         .sort((a, b) =>
-          a.sku.localeCompare(
-            b.sku
-          )
+          a.sku.localeCompare(b.sku)
         ),
     [products]
   );
 
   const filteredOrders = useMemo(() => {
-    const normalized =
-      search
-        .trim()
-        .toLowerCase();
+    if (!purchaseOrders) {
+      return [];
+    }
 
-    return purchaseOrders.filter(
-      (order) => {
-        const supplier =
-          supplierMap.get(
-            order.supplierId
-          );
+    const normalized = search
+      .trim()
+      .toLowerCase();
 
-        const matchesSearch =
-          normalized.length === 0 ||
-          order.orderNumber
-            .toLowerCase()
-            .includes(normalized) ||
-          (
-            supplier?.name ?? ""
-          )
-            .toLowerCase()
-            .includes(normalized);
+    return purchaseOrders.filter((order) => {
+      const supplier = supplierMap.get(
+        order.supplierId
+      );
 
-        const matchesStatus =
-          !statusFilter ||
-          order.status ===
-            statusFilter;
+      const matchesSearch =
+        normalized.length === 0 ||
+        order.orderNumber
+          .toLowerCase()
+          .includes(normalized) ||
+        (supplier?.name ?? "")
+          .toLowerCase()
+          .includes(normalized);
 
-        const matchesSupplier =
-          !supplierFilter ||
-          order.supplierId ===
-            supplierFilter;
+      const matchesStatus =
+        !statusFilter ||
+        order.status === statusFilter;
 
-        return (
-          matchesSearch &&
-          matchesStatus &&
-          matchesSupplier
-        );
-      }
-    );
+      const matchesSupplier =
+        !supplierFilter ||
+        order.supplierId === supplierFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesSupplier
+      );
+    });
   }, [
     purchaseOrders,
     supplierMap,
@@ -423,29 +402,26 @@ export default function PurchasingPage() {
 
   const draftCount = useMemo(
     () =>
-      purchaseOrders.filter(
-        (order) =>
-          order.status === "DRAFT"
+      (purchaseOrders ?? []).filter(
+        (order) => order.status === "DRAFT"
       ).length,
     [purchaseOrders]
   );
 
   const submittedCount = useMemo(
     () =>
-      purchaseOrders.filter(
+      (purchaseOrders ?? []).filter(
         (order) =>
-          order.status ===
-          "SUBMITTED"
+          order.status === "SUBMITTED"
       ).length,
     [purchaseOrders]
   );
 
   const approvedCount = useMemo(
     () =>
-      purchaseOrders.filter(
+      (purchaseOrders ?? []).filter(
         (order) =>
-          order.status ===
-          "APPROVED"
+          order.status === "APPROVED"
       ).length,
     [purchaseOrders]
   );
@@ -454,14 +430,10 @@ export default function PurchasingPage() {
     setOrderNumber("");
     setSupplierId("");
     setOrderDate(
-      new Date()
-        .toISOString()
-        .slice(0, 10)
+      new Date().toISOString().slice(0, 10)
     );
     setNotes("");
-    setLines([
-      emptyLine(),
-    ]);
+    setLines([emptyLine()]);
     setFormError(null);
   }
 
@@ -489,14 +461,13 @@ export default function PurchasingPage() {
     value: string
   ) {
     setLines((current) =>
-      current.map(
-        (line, lineIndex) =>
-          lineIndex === index
-            ? {
-                ...line,
-                [field]: value,
-              }
-            : line
+      current.map((line, lineIndex) =>
+        lineIndex === index
+          ? {
+              ...line,
+              [field]: value,
+            }
+          : line
       )
     );
   }
@@ -508,9 +479,7 @@ export default function PurchasingPage() {
     ]);
   }
 
-  function removeLine(
-    index: number
-  ) {
+  function removeLine(index: number) {
     setLines((current) => {
       if (current.length === 1) {
         return current;
@@ -550,9 +519,7 @@ export default function PurchasingPage() {
     }
 
     if (!supplierId) {
-      setFormError(
-        "Supplier is required."
-      );
+      setFormError("Supplier is required.");
       return;
     }
 
@@ -570,8 +537,7 @@ export default function PurchasingPage() {
       return;
     }
 
-    const seenProducts =
-      new Set<string>();
+    const seenProducts = new Set<string>();
 
     const parsedLines: PurchaseOrderCreateRequest["lines"] =
       [];
@@ -581,8 +547,7 @@ export default function PurchasingPage() {
       index < lines.length;
       index += 1
     ) {
-      const line =
-        lines[index];
+      const line = lines[index];
 
       if (!line.productId) {
         setFormError(
@@ -594,9 +559,7 @@ export default function PurchasingPage() {
       }
 
       if (
-        seenProducts.has(
-          line.productId
-        )
+        seenProducts.has(line.productId)
       ) {
         setFormError(
           "A product cannot appear more than once on the same purchase order."
@@ -604,24 +567,18 @@ export default function PurchasingPage() {
         return;
       }
 
-      seenProducts.add(
-        line.productId
+      seenProducts.add(line.productId);
+
+      const quantity = Number(
+        line.orderedQuantity
       );
 
-      const quantity =
-        Number(
-          line.orderedQuantity
-        );
-
-      const unitCost =
-        Number(
-          line.unitCost
-        );
+      const unitCost = Number(
+        line.unitCost
+      );
 
       if (
-        !Number.isFinite(
-          quantity
-        ) ||
+        !Number.isFinite(quantity) ||
         quantity <= 0
       ) {
         setFormError(
@@ -633,9 +590,7 @@ export default function PurchasingPage() {
       }
 
       if (
-        !Number.isFinite(
-          unitCost
-        ) ||
+        !Number.isFinite(unitCost) ||
         unitCost < 0
       ) {
         setFormError(
@@ -647,10 +602,8 @@ export default function PurchasingPage() {
       }
 
       parsedLines.push({
-        productId:
-          line.productId,
-        orderedQuantity:
-          quantity,
+        productId: line.productId,
+        orderedQuantity: quantity,
         unitCost,
       });
     }
@@ -659,30 +612,22 @@ export default function PurchasingPage() {
       setSaving(true);
       setFormError(null);
 
-      const request: PurchaseOrderCreateRequest =
-        {
-          companyId,
-          supplierId,
-          orderNumber:
-            orderNumber.trim(),
-          orderDate,
-          notes:
-            notes.trim() ||
-            null,
-          lines: parsedLines,
-        };
+      const request: PurchaseOrderCreateRequest = {
+        companyId,
+        supplierId,
+        orderNumber: orderNumber.trim(),
+        orderDate,
+        notes: notes.trim() || null,
+        lines: parsedLines,
+      };
 
       const created =
-        await createPurchaseOrder(
-          request
-        );
+        await createPurchaseOrder(request);
 
-      setPurchaseOrders(
-        (current) => [
-          created,
-          ...current,
-        ]
-      );
+      setPurchaseOrders((current) => [
+        created,
+        ...(current ?? []),
+      ]);
 
       setShowCreateForm(false);
       resetForm();
@@ -711,40 +656,28 @@ export default function PurchasingPage() {
     }
 
     try {
-      const freshOrder =
-        await getPurchaseOrders(
-          companyId
-        );
+      const freshOrders =
+        await getPurchaseOrders(companyId);
 
-      const found =
-        freshOrder.find(
-          (item) =>
-            item.id === order.id
-        );
-
-      setSelectedOrder(
-        found ?? order
+      const found = freshOrders.find(
+        (item) => item.id === order.id
       );
+
+      setSelectedOrder(found ?? order);
       setShowView(true);
     } catch {
-      setSelectedOrder(
-        order
-      );
+      setSelectedOrder(order);
       setShowView(true);
     }
   }
 
   function closeView() {
     setShowView(false);
-    setSelectedOrder(
-      null
-    );
+    setSelectedOrder(null);
   }
 
   function openActionDialog(
-    type:
-      | "submit"
-      | "approve",
+    type: "submit" | "approve",
     order: PurchaseOrder
   ) {
     setDialogType(type);
@@ -770,8 +703,7 @@ export default function PurchasingPage() {
     }
 
     if (
-      dialogType ===
-        "submit" &&
+      dialogType === "submit" &&
       !canCreate
     ) {
       setToast({
@@ -783,8 +715,7 @@ export default function PurchasingPage() {
     }
 
     if (
-      dialogType ===
-        "approve" &&
+      dialogType === "approve" &&
       !canApprove
     ) {
       setToast({
@@ -798,13 +729,9 @@ export default function PurchasingPage() {
     try {
       setActionLoading(true);
 
-      let updated:
-        | PurchaseOrder;
+      let updated: PurchaseOrder;
 
-      if (
-        dialogType ===
-        "submit"
-      ) {
+      if (dialogType === "submit") {
         updated =
           await submitPurchaseOrder(
             companyId,
@@ -818,30 +745,24 @@ export default function PurchasingPage() {
           );
       }
 
-      setPurchaseOrders(
-        (current) =>
-          current.map(
-            (order) =>
-              order.id ===
-              updated.id
-                ? updated
-                : order
-          )
+      setPurchaseOrders((current) =>
+        (current ?? []).map((order) =>
+          order.id === updated.id
+            ? updated
+            : order
+        )
       );
 
-      setSelectedOrder(
-        (current) =>
-          current?.id ===
-          updated.id
-            ? updated
-            : current
+      setSelectedOrder((current) =>
+        current?.id === updated.id
+          ? updated
+          : current
       );
 
       setToast({
         type: "success",
         message:
-          dialogType ===
-          "submit"
+          dialogType === "submit"
             ? "Purchase order submitted successfully."
             : "Purchase order approved successfully.",
       });
@@ -917,9 +838,7 @@ export default function PurchasingPage() {
 
             <button
               type="button"
-              onClick={
-                openCreateForm
-              }
+              onClick={openCreateForm}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
             >
               <PlusIcon />
@@ -932,14 +851,12 @@ export default function PurchasingPage() {
           {toast && (
             <div
               className={`mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-                toast.type ===
-                "success"
+                toast.type === "success"
                   ? "border-success/20 bg-success/10 text-success"
                   : "border-danger/20 bg-danger/10 text-danger"
               }`}
             >
-              {toast.type ===
-              "success" ? (
+              {toast.type === "success" ? (
                 <CheckIcon />
               ) : (
                 <AlertIcon />
@@ -988,7 +905,7 @@ export default function PurchasingPage() {
               </div>
 
               <div className="mt-2 text-2xl font-semibold text-ink">
-                {purchaseOrders.length}
+                {purchaseOrders?.length ?? 0}
               </div>
             </div>
 
@@ -1044,9 +961,7 @@ export default function PurchasingPage() {
               </div>
 
               <select
-                value={
-                  statusFilter
-                }
+                value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(
                     event.target
@@ -1058,29 +973,20 @@ export default function PurchasingPage() {
                 {statusOptions.map(
                   (option) => (
                     <option
-                      key={
-                        option.value
-                      }
-                      value={
-                        option.value
-                      }
+                      key={option.value}
+                      value={option.value}
                     >
-                      {
-                        option.label
-                      }
+                      {option.label}
                     </option>
                   )
                 )}
               </select>
 
               <select
-                value={
-                  supplierFilter
-                }
+                value={supplierFilter}
                 onChange={(event) =>
                   setSupplierFilter(
-                    event.target
-                      .value
+                    event.target.value
                   )
                 }
                 className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -1092,16 +998,10 @@ export default function PurchasingPage() {
                 {suppliers.map(
                   (supplier) => (
                     <option
-                      key={
-                        supplier.id
-                      }
-                      value={
-                        supplier.id
-                      }
+                      key={supplier.id}
+                      value={supplier.id}
                     >
-                      {
-                        supplier.name
-                      }
+                      {supplier.name}
                     </option>
                   )
                 )}
@@ -1127,7 +1027,7 @@ export default function PurchasingPage() {
               </div>
             </div>
 
-            {loading ? (
+            {purchaseOrders === null ? (
               <div className="px-5 py-12 text-center text-sm text-ink-muted">
                 Loading purchase orders...
               </div>
@@ -1144,9 +1044,7 @@ export default function PurchasingPage() {
 
                 <button
                   type="button"
-                  onClick={
-                    openCreateForm
-                  }
+                  onClick={openCreateForm}
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                 >
                   <PlusIcon />
@@ -1198,9 +1096,7 @@ export default function PurchasingPage() {
 
                         return (
                           <tr
-                            key={
-                              order.id
-                            }
+                            key={order.id}
                             className="border-b border-line last:border-0 hover:bg-surface-hover"
                           >
                             <td className="px-5 py-4">
@@ -1344,9 +1240,7 @@ export default function PurchasingPage() {
               </div>
 
               <form
-                onSubmit={
-                  handleCreate
-                }
+                onSubmit={handleCreate}
               >
                 <div className="space-y-7 px-6 py-6">
                   {formError && (
@@ -1421,9 +1315,7 @@ export default function PurchasingPage() {
                           </option>
 
                           {activeSuppliers.map(
-                            (
-                              supplier
-                            ) => (
+                            (supplier) => (
                               <option
                                 key={
                                   supplier.id
@@ -1510,9 +1402,7 @@ export default function PurchasingPage() {
 
                       <button
                         type="button"
-                        onClick={
-                          addLine
-                        }
+                        onClick={addLine}
                         className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink-secondary hover:bg-surface-hover"
                       >
                         <PlusIcon />
@@ -1573,9 +1463,7 @@ export default function PurchasingPage() {
 
                               return (
                                 <tr
-                                  key={
-                                    index
-                                  }
+                                  key={index}
                                   className="border-b border-line last:border-0"
                                 >
                                   <td className="px-4 py-3">
@@ -1589,7 +1477,8 @@ export default function PurchasingPage() {
                                         updateLine(
                                           index,
                                           "productId",
-                                          event.target
+                                          event
+                                            .target
                                             .value
                                         )
                                       }
@@ -1638,7 +1527,8 @@ export default function PurchasingPage() {
                                         updateLine(
                                           index,
                                           "orderedQuantity",
-                                          event.target
+                                          event
+                                            .target
                                             .value
                                         )
                                       }
@@ -1661,7 +1551,8 @@ export default function PurchasingPage() {
                                         updateLine(
                                           index,
                                           "unitCost",
-                                          event.target
+                                          event
+                                            .target
                                             .value
                                         )
                                       }
@@ -1709,9 +1600,7 @@ export default function PurchasingPage() {
                       onClick={
                         closeCreateForm
                       }
-                      disabled={
-                        saving
-                      }
+                      disabled={saving}
                       className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:cursor-not-allowed"
                     >
                       Cancel
@@ -1719,9 +1608,7 @@ export default function PurchasingPage() {
 
                     <button
                       type="submit"
-                      disabled={
-                        saving
-                      }
+                      disabled={saving}
                       className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {saving
@@ -1766,9 +1653,7 @@ export default function PurchasingPage() {
 
                   <button
                     type="button"
-                    onClick={
-                      closeView
-                    }
+                    onClick={closeView}
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink"
                     aria-label="Close"
                   >
@@ -1860,9 +1745,7 @@ export default function PurchasingPage() {
 
                         <tbody>
                           {selectedOrder.lines.map(
-                            (
-                              line
-                            ) => {
+                            (line) => {
                               const product =
                                 productMap.get(
                                   line.productId
@@ -1870,9 +1753,7 @@ export default function PurchasingPage() {
 
                               return (
                                 <tr
-                                  key={
-                                    line.id
-                                  }
+                                  key={line.id}
                                   className="border-b border-line last:border-0"
                                 >
                                   <td className="px-4 py-3">
@@ -1977,9 +1858,7 @@ export default function PurchasingPage() {
 
                     <button
                       type="button"
-                      onClick={
-                        closeView
-                      }
+                      onClick={closeView}
                       className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
                     >
                       Close
@@ -2047,3 +1926,4 @@ export default function PurchasingPage() {
     </AppShell>
   );
 }
+
