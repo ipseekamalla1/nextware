@@ -126,6 +126,12 @@ const navigation: {
           "PURCHASE_ORDER_CREATE",
       },
       {
+  label: "Receiving",
+  icon: PackageCheckIcon,
+  href: "/receiving",
+  permission: "INVENTORY_VIEW",
+},
+      {
         label: "Sales",
         icon: CartUpIcon,
         href: "/sales",

@@ -77,7 +77,9 @@ const statusOptions: {
   },
 ];
 
-function formatStatus(status: PurchaseOrderStatus): string {
+function formatStatus(
+  status: PurchaseOrderStatus,
+): string {
   switch (status) {
     case "PARTIALLY_RECEIVED":
       return "Partially Received";
@@ -90,7 +92,9 @@ function formatStatus(status: PurchaseOrderStatus): string {
   }
 }
 
-function statusClass(status: PurchaseOrderStatus): string {
+function statusClass(
+  status: PurchaseOrderStatus,
+): string {
   switch (status) {
     case "DRAFT":
       return "bg-surface-active text-ink-secondary";
@@ -115,15 +119,21 @@ function statusClass(status: PurchaseOrderStatus): string {
   }
 }
 
-function formatCurrency(value: number): string {
+function formatCurrency(
+  value: number,
+): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function formatDate(value: string): string {
-  const date = new Date(`${value}T00:00:00`);
+function formatDate(
+  value: string,
+): string {
+  const date = new Date(
+    `${value}T00:00:00`,
+  );
 
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -144,27 +154,24 @@ export default function PurchasingPage() {
   const companyId = getCurrentCompanyId();
 
   const canCreate = hasPermission(
-    "PURCHASE_ORDER_CREATE"
+    "PURCHASE_ORDER_CREATE",
   );
 
   const canApprove = hasPermission(
-    "PURCHASE_ORDER_APPROVE"
+    "PURCHASE_ORDER_APPROVE",
   );
 
   /*
-   * IMPORTANT:
-   *
-   * null = data has not finished loading
-   * []   = data finished loading and there are no orders
-   * [...] = data loaded successfully
-   *
-   * This removes the separate loading state and prevents
-   * the React set-state-in-effect warning caused by
-   * synchronously changing loading state from the effect-driven
-   * data-loading flow.
+   * null = still loading
+   * []   = loaded successfully with no purchase orders
+   * [...] = loaded successfully
    */
-  const [purchaseOrders, setPurchaseOrders] =
-    useState<PurchaseOrder[] | null>(null);
+  const [
+    purchaseOrders,
+    setPurchaseOrders,
+  ] = useState<PurchaseOrder[] | null>(
+    null,
+  );
 
   const [suppliers, setSuppliers] =
     useState<Supplier[]>([]);
@@ -175,22 +182,35 @@ export default function PurchasingPage() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
-
-  const [statusFilter, setStatusFilter] =
-    useState<PurchaseOrderStatus | "">("");
-
-  const [supplierFilter, setSupplierFilter] =
+  const [search, setSearch] =
     useState("");
 
-  const [showCreateForm, setShowCreateForm] =
-    useState(false);
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState<PurchaseOrderStatus | "">(
+    "",
+  );
+
+  const [
+    supplierFilter,
+    setSupplierFilter,
+  ] = useState("");
+
+  const [
+    showCreateForm,
+    setShowCreateForm,
+  ] = useState(false);
 
   const [showView, setShowView] =
     useState(false);
 
-  const [selectedOrder, setSelectedOrder] =
-    useState<PurchaseOrder | null>(null);
+  const [
+    selectedOrder,
+    setSelectedOrder,
+  ] = useState<PurchaseOrder | null>(
+    null,
+  );
 
   const [orderNumber, setOrderNumber] =
     useState("");
@@ -198,96 +218,131 @@ export default function PurchasingPage() {
   const [supplierId, setSupplierId] =
     useState("");
 
-  const [orderDate, setOrderDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [orderDate, setOrderDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .slice(0, 10),
+    );
 
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] =
+    useState("");
 
-  const [lines, setLines] = useState<DraftLine[]>([
-    emptyLine(),
-  ]);
+  const [lines, setLines] =
+    useState<DraftLine[]>([
+      emptyLine(),
+    ]);
 
   const [formError, setFormError] =
     useState<string | null>(null);
 
-  const [saving, setSaving] = useState(false);
-
-  const [dialogType, setDialogType] =
-    useState<DialogType>(null);
-
-  const [dialogOrder, setDialogOrder] =
-    useState<PurchaseOrder | null>(null);
-
-  const [actionLoading, setActionLoading] =
+  const [saving, setSaving] =
     useState(false);
 
-  const [toast, setToast] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+  const [
+    dialogType,
+    setDialogType,
+  ] = useState<DialogType>(null);
+
+  const [
+    dialogOrder,
+    setDialogOrder,
+  ] = useState<PurchaseOrder | null>(
+    null,
+  );
+
+  const [
+    actionLoading,
+    setActionLoading,
+  ] = useState(false);
+
+  const [toast, setToast] =
+    useState<{
+      type: "success" | "error";
+      message: string;
+    } | null>(null);
 
   /*
-   * Data loader.
+   * Load purchasing data.
    *
-   * No loading state is toggled here.
-   * purchaseOrders being null is the loading indicator.
+   * The company ID is passed explicitly as a
+   * required string so TypeScript never receives
+   * string | null here.
    */
-  const loadData = useCallback(async () => {
-    if (!companyId || !canCreate) {
-      return;
-    }
+  const loadData = useCallback(
+    async (activeCompanyId: string) => {
+      try {
+        setError(null);
 
-    try {
-      setError(null);
+        const [
+          purchaseOrderData,
+          supplierData,
+          productData,
+        ] = await Promise.all([
+          getPurchaseOrders(
+            activeCompanyId,
+          ),
+          getSuppliers(
+            activeCompanyId,
+          ),
+          getProducts(
+            activeCompanyId,
+          ),
+        ]);
 
-      const [
-        purchaseOrderData,
-        supplierData,
-        productData,
-      ] = await Promise.all([
-        getPurchaseOrders(companyId),
-        getSuppliers(companyId),
-        getProducts(companyId),
-      ]);
+        setPurchaseOrders(
+          purchaseOrderData,
+        );
 
-      setPurchaseOrders(purchaseOrderData);
-      setSuppliers(supplierData);
-      setProducts(productData);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load purchasing data."
-      );
+        setSuppliers(
+          supplierData,
+        );
 
-      /*
-       * Set an empty array so the page does not remain
-       * permanently in the loading state after an error.
-       */
-      setPurchaseOrders([]);
-    }
-  }, [companyId, canCreate]);
+        setProducts(
+          productData,
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load purchasing data.",
+        );
+
+        setPurchaseOrders([]);
+      }
+    },
+    [],
+  );
 
   /*
    * Initial data loading.
    *
-   * The effect only starts the asynchronous operation.
-   * There is no synchronous setState call directly inside
-   * the effect body.
+   * The timeout prevents the state updates inside
+   * loadData from being triggered synchronously
+   * from the effect itself.
    */
   useEffect(() => {
     if (!companyId || !canCreate) {
       return;
     }
 
-    void loadData();
-  }, [companyId, canCreate, loadData]);
+    const activeCompanyId = companyId;
+
+    const timer = window.setTimeout(() => {
+      void loadData(activeCompanyId);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    companyId,
+    canCreate,
+    loadData,
+  ]);
 
   /*
    * Toast auto-dismiss.
-   *
-   * State changes only from the asynchronous timer callback.
    */
   useEffect(() => {
     if (!toast) {
@@ -306,43 +361,57 @@ export default function PurchasingPage() {
   const supplierMap = useMemo(
     () =>
       new Map(
-        suppliers.map((supplier) => [
-          supplier.id,
-          supplier,
-        ])
+        suppliers.map(
+          (supplier) => [
+            supplier.id,
+            supplier,
+          ],
+        ),
       ),
-    [suppliers]
+    [suppliers],
   );
 
   const productMap = useMemo(
     () =>
       new Map(
-        products.map((product) => [
-          product.id,
-          product,
-        ])
+        products.map(
+          (product) => [
+            product.id,
+            product,
+          ],
+        ),
       ),
-    [products]
+    [products],
   );
 
   const activeSuppliers = useMemo(
     () =>
       suppliers
-        .filter((supplier) => supplier.active)
+        .filter(
+          (supplier) =>
+            supplier.active,
+        )
         .sort((a, b) =>
-          a.name.localeCompare(b.name)
+          a.name.localeCompare(
+            b.name,
+          ),
         ),
-    [suppliers]
+    [suppliers],
   );
 
   const activeProducts = useMemo(
     () =>
       products
-        .filter((product) => product.active)
+        .filter(
+          (product) =>
+            product.active,
+        )
         .sort((a, b) =>
-          a.sku.localeCompare(b.sku)
+          a.sku.localeCompare(
+            b.sku,
+          ),
         ),
-    [products]
+    [products],
   );
 
   const filteredOrders = useMemo(() => {
@@ -350,38 +419,48 @@ export default function PurchasingPage() {
       return [];
     }
 
-    const normalized = search
-      .trim()
-      .toLowerCase();
+    const normalized =
+      search.trim().toLowerCase();
 
-    return purchaseOrders.filter((order) => {
-      const supplier = supplierMap.get(
-        order.supplierId
-      );
+    return purchaseOrders.filter(
+      (order) => {
+        const supplier =
+          supplierMap.get(
+            order.supplierId,
+          );
 
-      const matchesSearch =
-        normalized.length === 0 ||
-        order.orderNumber
-          .toLowerCase()
-          .includes(normalized) ||
-        (supplier?.name ?? "")
-          .toLowerCase()
-          .includes(normalized);
+        const matchesSearch =
+          normalized.length === 0 ||
+          order.orderNumber
+            .toLowerCase()
+            .includes(
+              normalized,
+            ) ||
+          (
+            supplier?.name ?? ""
+          )
+            .toLowerCase()
+            .includes(
+              normalized,
+            );
 
-      const matchesStatus =
-        !statusFilter ||
-        order.status === statusFilter;
+        const matchesStatus =
+          !statusFilter ||
+          order.status ===
+            statusFilter;
 
-      const matchesSupplier =
-        !supplierFilter ||
-        order.supplierId === supplierFilter;
+        const matchesSupplier =
+          !supplierFilter ||
+          order.supplierId ===
+            supplierFilter;
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesSupplier
-      );
-    });
+        return (
+          matchesSearch &&
+          matchesStatus &&
+          matchesSupplier
+        );
+      },
+    );
   }, [
     purchaseOrders,
     supplierMap,
@@ -395,43 +474,57 @@ export default function PurchasingPage() {
       filteredOrders.reduce(
         (sum, order) =>
           sum + order.totalAmount,
-        0
+        0,
       ),
-    [filteredOrders]
+    [filteredOrders],
   );
 
   const draftCount = useMemo(
     () =>
-      (purchaseOrders ?? []).filter(
-        (order) => order.status === "DRAFT"
+      (
+        purchaseOrders ?? []
+      ).filter(
+        (order) =>
+          order.status ===
+          "DRAFT",
       ).length,
-    [purchaseOrders]
+    [purchaseOrders],
   );
 
   const submittedCount = useMemo(
     () =>
-      (purchaseOrders ?? []).filter(
+      (
+        purchaseOrders ?? []
+      ).filter(
         (order) =>
-          order.status === "SUBMITTED"
+          order.status ===
+          "SUBMITTED",
       ).length,
-    [purchaseOrders]
+    [purchaseOrders],
   );
 
   const approvedCount = useMemo(
     () =>
-      (purchaseOrders ?? []).filter(
+      (
+        purchaseOrders ?? []
+      ).filter(
         (order) =>
-          order.status === "APPROVED"
+          order.status ===
+          "APPROVED",
       ).length,
-    [purchaseOrders]
+    [purchaseOrders],
   );
 
   function resetForm() {
     setOrderNumber("");
     setSupplierId("");
+
     setOrderDate(
-      new Date().toISOString().slice(0, 10)
+      new Date()
+        .toISOString()
+        .slice(0, 10),
     );
+
     setNotes("");
     setLines([emptyLine()]);
     setFormError(null);
@@ -458,17 +551,18 @@ export default function PurchasingPage() {
   function updateLine(
     index: number,
     field: keyof DraftLine,
-    value: string
+    value: string,
   ) {
     setLines((current) =>
-      current.map((line, lineIndex) =>
-        lineIndex === index
-          ? {
-              ...line,
-              [field]: value,
-            }
-          : line
-      )
+      current.map(
+        (line, lineIndex) =>
+          lineIndex === index
+            ? {
+                ...line,
+                [field]: value,
+              }
+            : line,
+      ),
     );
   }
 
@@ -479,7 +573,9 @@ export default function PurchasingPage() {
     ]);
   }
 
-  function removeLine(index: number) {
+  function removeLine(
+    index: number,
+  ) {
     setLines((current) => {
       if (current.length === 1) {
         return current;
@@ -487,57 +583,60 @@ export default function PurchasingPage() {
 
       return current.filter(
         (_, lineIndex) =>
-          lineIndex !== index
+          lineIndex !== index,
       );
     });
   }
 
   async function handleCreate(
-    event: React.FormEvent<HTMLFormElement>
+    event: React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
     if (!companyId) {
       setFormError(
-        "No authenticated company context is available."
+        "No authenticated company context is available.",
       );
       return;
     }
 
     if (!canCreate) {
       setFormError(
-        "You do not have permission to create purchase orders."
+        "You do not have permission to create purchase orders.",
       );
       return;
     }
 
     if (!orderNumber.trim()) {
       setFormError(
-        "Order number is required."
+        "Order number is required.",
       );
       return;
     }
 
     if (!supplierId) {
-      setFormError("Supplier is required.");
+      setFormError(
+        "Supplier is required.",
+      );
       return;
     }
 
     if (!orderDate) {
       setFormError(
-        "Order date is required."
+        "Order date is required.",
       );
       return;
     }
 
     if (lines.length === 0) {
       setFormError(
-        "At least one purchase order line is required."
+        "At least one purchase order line is required.",
       );
       return;
     }
 
-    const seenProducts = new Set<string>();
+    const seenProducts =
+      new Set<string>();
 
     const parsedLines: PurchaseOrderCreateRequest["lines"] =
       [];
@@ -553,57 +652,67 @@ export default function PurchasingPage() {
         setFormError(
           `Product is required on line ${
             index + 1
-          }.`
+          }.`,
         );
         return;
       }
 
       if (
-        seenProducts.has(line.productId)
+        seenProducts.has(
+          line.productId,
+        )
       ) {
         setFormError(
-          "A product cannot appear more than once on the same purchase order."
+          "A product cannot appear more than once on the same purchase order.",
         );
         return;
       }
 
-      seenProducts.add(line.productId);
+      seenProducts.add(
+        line.productId,
+      );
 
       const quantity = Number(
-        line.orderedQuantity
+        line.orderedQuantity,
       );
 
       const unitCost = Number(
-        line.unitCost
+        line.unitCost,
       );
 
       if (
-        !Number.isFinite(quantity) ||
+        !Number.isFinite(
+          quantity,
+        ) ||
         quantity <= 0
       ) {
         setFormError(
           `Ordered quantity must be greater than zero on line ${
             index + 1
-          }.`
+          }.`,
         );
         return;
       }
 
       if (
-        !Number.isFinite(unitCost) ||
+        !Number.isFinite(
+          unitCost,
+        ) ||
         unitCost < 0
       ) {
         setFormError(
           `Unit cost cannot be negative on line ${
             index + 1
-          }.`
+          }.`,
         );
         return;
       }
 
       parsedLines.push({
-        productId: line.productId,
-        orderedQuantity: quantity,
+        productId:
+          line.productId,
+        orderedQuantity:
+          quantity,
         unitCost,
       });
     }
@@ -612,22 +721,29 @@ export default function PurchasingPage() {
       setSaving(true);
       setFormError(null);
 
-      const request: PurchaseOrderCreateRequest = {
-        companyId,
-        supplierId,
-        orderNumber: orderNumber.trim(),
-        orderDate,
-        notes: notes.trim() || null,
-        lines: parsedLines,
-      };
+      const request: PurchaseOrderCreateRequest =
+        {
+          companyId,
+          supplierId,
+          orderNumber:
+            orderNumber.trim(),
+          orderDate,
+          notes:
+            notes.trim() || null,
+          lines: parsedLines,
+        };
 
       const created =
-        await createPurchaseOrder(request);
+        await createPurchaseOrder(
+          request,
+        );
 
-      setPurchaseOrders((current) => [
-        created,
-        ...(current ?? []),
-      ]);
+      setPurchaseOrders(
+        (current) => [
+          created,
+          ...(current ?? []),
+        ],
+      );
 
       setShowCreateForm(false);
       resetForm();
@@ -641,7 +757,7 @@ export default function PurchasingPage() {
       setFormError(
         err instanceof Error
           ? err.message
-          : "Failed to create purchase order."
+          : "Failed to create purchase order.",
       );
     } finally {
       setSaving(false);
@@ -649,21 +765,31 @@ export default function PurchasingPage() {
   }
 
   async function openOrder(
-    order: PurchaseOrder
+    order: PurchaseOrder,
   ) {
     if (!companyId) {
       return;
     }
 
+    const activeCompanyId =
+      companyId;
+
     try {
       const freshOrders =
-        await getPurchaseOrders(companyId);
+        await getPurchaseOrders(
+          activeCompanyId,
+        );
 
-      const found = freshOrders.find(
-        (item) => item.id === order.id
+      const found =
+        freshOrders.find(
+          (item) =>
+            item.id === order.id,
+        );
+
+      setSelectedOrder(
+        found ?? order,
       );
 
-      setSelectedOrder(found ?? order);
       setShowView(true);
     } catch {
       setSelectedOrder(order);
@@ -677,8 +803,10 @@ export default function PurchasingPage() {
   }
 
   function openActionDialog(
-    type: "submit" | "approve",
-    order: PurchaseOrder
+    type:
+      | "submit"
+      | "approve",
+    order: PurchaseOrder,
   ) {
     setDialogType(type);
     setDialogOrder(order);
@@ -701,6 +829,9 @@ export default function PurchasingPage() {
     ) {
       return;
     }
+
+    const activeCompanyId =
+      companyId;
 
     if (
       dialogType === "submit" &&
@@ -731,38 +862,48 @@ export default function PurchasingPage() {
 
       let updated: PurchaseOrder;
 
-      if (dialogType === "submit") {
+      if (
+        dialogType === "submit"
+      ) {
         updated =
           await submitPurchaseOrder(
-            companyId,
-            dialogOrder.id
+            activeCompanyId,
+            dialogOrder.id,
           );
       } else {
         updated =
           await approvePurchaseOrder(
-            companyId,
-            dialogOrder.id
+            activeCompanyId,
+            dialogOrder.id,
           );
       }
 
-      setPurchaseOrders((current) =>
-        (current ?? []).map((order) =>
-          order.id === updated.id
-            ? updated
-            : order
-        )
+      setPurchaseOrders(
+        (current) =>
+          (
+            current ?? []
+          ).map(
+            (purchaseOrder) =>
+              purchaseOrder.id ===
+              updated.id
+                ? updated
+                : purchaseOrder,
+          ),
       );
 
-      setSelectedOrder((current) =>
-        current?.id === updated.id
-          ? updated
-          : current
+      setSelectedOrder(
+        (current) =>
+          current?.id ===
+          updated.id
+            ? updated
+            : current,
       );
 
       setToast({
         type: "success",
         message:
-          dialogType === "submit"
+          dialogType ===
+          "submit"
             ? "Purchase order submitted successfully."
             : "Purchase order approved successfully.",
       });
@@ -791,7 +932,8 @@ export default function PurchasingPage() {
             </h1>
 
             <p className="mt-2 text-sm text-ink-muted">
-              Please sign in again to access purchasing.
+              Please sign in again to
+              access purchasing.
             </p>
           </div>
         </div>
@@ -813,7 +955,9 @@ export default function PurchasingPage() {
             </h1>
 
             <p className="mt-2 text-sm text-ink-muted">
-              Your account does not have permission to access purchasing.
+              Your account does not
+              have permission to access
+              purchasing.
             </p>
           </div>
         </div>
@@ -832,13 +976,16 @@ export default function PurchasingPage() {
               </h1>
 
               <p className="mt-1 text-sm text-ink-muted">
-                Create, submit, and approve purchase orders.
+                Create, submit, and
+                approve purchase orders.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={openCreateForm}
+              onClick={
+                openCreateForm
+              }
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
             >
               <PlusIcon />
@@ -851,12 +998,14 @@ export default function PurchasingPage() {
           {toast && (
             <div
               className={`mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-                toast.type === "success"
+                toast.type ===
+                "success"
                   ? "border-success/20 bg-success/10 text-success"
                   : "border-danger/20 bg-danger/10 text-danger"
               }`}
             >
-              {toast.type === "success" ? (
+              {toast.type ===
+              "success" ? (
                 <CheckIcon />
               ) : (
                 <AlertIcon />
@@ -889,7 +1038,9 @@ export default function PurchasingPage() {
               <button
                 type="button"
                 onClick={() =>
-                  void loadData()
+                  void loadData(
+                    companyId,
+                  )
                 }
                 className="font-semibold underline"
               >
@@ -905,7 +1056,8 @@ export default function PurchasingPage() {
               </div>
 
               <div className="mt-2 text-2xl font-semibold text-ink">
-                {purchaseOrders?.length ?? 0}
+                {purchaseOrders?.length ??
+                  0}
               </div>
             </div>
 
@@ -943,16 +1095,16 @@ export default function PurchasingPage() {
           <div className="mb-5 rounded-xl border border-line bg-surface p-4">
             <div className="flex flex-col gap-3 lg:flex-row">
               <div className="relative flex-1">
-                <SearchIcon
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
-                />
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
 
                 <input
                   type="text"
                   value={search}
-                  onChange={(event) =>
+                  onChange={(
+                    event,
+                  ) =>
                     setSearch(
-                      event.target.value
+                      event.target.value,
                     )
                   }
                   placeholder="Search order number or supplier..."
@@ -962,10 +1114,14 @@ export default function PurchasingPage() {
 
               <select
                 value={statusFilter}
-                onChange={(event) =>
+                onChange={(
+                  event,
+                ) =>
                   setStatusFilter(
                     event.target
-                      .value as PurchaseOrderStatus | ""
+                      .value as
+                      | PurchaseOrderStatus
+                      | "",
                   )
                 }
                 className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -973,20 +1129,30 @@ export default function PurchasingPage() {
                 {statusOptions.map(
                   (option) => (
                     <option
-                      key={option.value}
-                      value={option.value}
+                      key={
+                        option.value
+                      }
+                      value={
+                        option.value
+                      }
                     >
-                      {option.label}
+                      {
+                        option.label
+                      }
                     </option>
-                  )
+                  ),
                 )}
               </select>
 
               <select
-                value={supplierFilter}
-                onChange={(event) =>
+                value={
+                  supplierFilter
+                }
+                onChange={(
+                  event,
+                ) =>
                   setSupplierFilter(
-                    event.target.value
+                    event.target.value,
                   )
                 }
                 className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -998,12 +1164,18 @@ export default function PurchasingPage() {
                 {suppliers.map(
                   (supplier) => (
                     <option
-                      key={supplier.id}
-                      value={supplier.id}
+                      key={
+                        supplier.id
+                      }
+                      value={
+                        supplier.id
+                      }
                     >
-                      {supplier.name}
+                      {
+                        supplier.name
+                      }
                     </option>
-                  )
+                  ),
                 )}
               </select>
             </div>
@@ -1017,34 +1189,43 @@ export default function PurchasingPage() {
                 </h2>
 
                 <p className="mt-1 text-xs text-ink-muted">
-                  {filteredOrders.length} orders
-                  {" · "}
+                  {
+                    filteredOrders.length
+                  }{" "}
+                  orders {" · "}
                   Total value $
                   {formatCurrency(
-                    totalValue
+                    totalValue,
                   )}
                 </p>
               </div>
             </div>
 
-            {purchaseOrders === null ? (
+            {purchaseOrders ===
+            null ? (
               <div className="px-5 py-12 text-center text-sm text-ink-muted">
-                Loading purchase orders...
+                Loading purchase
+                orders...
               </div>
             ) : filteredOrders.length ===
               0 ? (
               <div className="px-5 py-16 text-center">
                 <div className="text-sm font-semibold text-ink">
-                  No purchase orders found
+                  No purchase orders
+                  found
                 </div>
 
                 <p className="mt-1 text-sm text-ink-muted">
-                  Create your first purchase order to get started.
+                  Create your first
+                  purchase order to
+                  get started.
                 </p>
 
                 <button
                   type="button"
-                  onClick={openCreateForm}
+                  onClick={
+                    openCreateForm
+                  }
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                 >
                   <PlusIcon />
@@ -1091,12 +1272,14 @@ export default function PurchasingPage() {
                       (order) => {
                         const supplier =
                           supplierMap.get(
-                            order.supplierId
+                            order.supplierId,
                           );
 
                         return (
                           <tr
-                            key={order.id}
+                            key={
+                              order.id
+                            }
                             className="border-b border-line last:border-0 hover:bg-surface-hover"
                           >
                             <td className="px-5 py-4">
@@ -1104,7 +1287,7 @@ export default function PurchasingPage() {
                                 type="button"
                                 onClick={() =>
                                   void openOrder(
-                                    order
+                                    order,
                                   )
                                 }
                                 className="font-semibold text-primary-600 hover:text-primary-700 hover:underline"
@@ -1122,13 +1305,14 @@ export default function PurchasingPage() {
 
                             <td className="px-5 py-4 text-sm text-ink-secondary">
                               {formatDate(
-                                order.orderDate
+                                order.orderDate,
                               )}
                             </td>
 
                             <td className="px-5 py-4 text-sm text-ink-secondary">
                               {
-                                order.lines
+                                order
+                                  .lines
                                   .length
                               }
                             </td>
@@ -1136,18 +1320,18 @@ export default function PurchasingPage() {
                             <td className="px-5 py-4 text-right text-sm font-medium text-ink">
                               $
                               {formatCurrency(
-                                order.totalAmount
+                                order.totalAmount,
                               )}
                             </td>
 
                             <td className="px-5 py-4">
                               <span
                                 className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
-                                  order.status
+                                  order.status,
                                 )}`}
                               >
                                 {formatStatus(
-                                  order.status
+                                  order.status,
                                 )}
                               </span>
                             </td>
@@ -1162,7 +1346,7 @@ export default function PurchasingPage() {
                                       onClick={() =>
                                         openActionDialog(
                                           "submit",
-                                          order
+                                          order,
                                         )
                                       }
                                       className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-surface-hover"
@@ -1179,7 +1363,7 @@ export default function PurchasingPage() {
                                       onClick={() =>
                                         openActionDialog(
                                           "approve",
-                                          order
+                                          order,
                                         )
                                       }
                                       className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-700"
@@ -1192,7 +1376,7 @@ export default function PurchasingPage() {
                                   type="button"
                                   onClick={() =>
                                     void openOrder(
-                                      order
+                                      order,
                                     )
                                   }
                                   className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-surface-hover"
@@ -1203,7 +1387,7 @@ export default function PurchasingPage() {
                             </td>
                           </tr>
                         );
-                      }
+                      },
                     )}
                   </tbody>
                 </table>
@@ -1222,7 +1406,9 @@ export default function PurchasingPage() {
                   </h2>
 
                   <p className="mt-1 text-xs text-ink-muted">
-                    Create a draft purchase order for an active supplier.
+                    Create a draft purchase
+                    order for an active
+                    supplier.
                   </p>
                 </div>
 
@@ -1240,7 +1426,9 @@ export default function PurchasingPage() {
               </div>
 
               <form
-                onSubmit={handleCreate}
+                onSubmit={
+                  handleCreate
+                }
               >
                 <div className="space-y-7 px-6 py-6">
                   {formError && (
@@ -1275,11 +1463,12 @@ export default function PurchasingPage() {
                             orderNumber
                           }
                           onChange={(
-                            event
+                            event,
                           ) =>
                             setOrderNumber(
-                              event.target
-                                .value
+                              event
+                                .target
+                                .value,
                             )
                           }
                           placeholder="PO-1001"
@@ -1301,11 +1490,12 @@ export default function PurchasingPage() {
                             supplierId
                           }
                           onChange={(
-                            event
+                            event,
                           ) =>
                             setSupplierId(
-                              event.target
-                                .value
+                              event
+                                .target
+                                .value,
                             )
                           }
                           className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -1315,7 +1505,9 @@ export default function PurchasingPage() {
                           </option>
 
                           {activeSuppliers.map(
-                            (supplier) => (
+                            (
+                              supplier,
+                            ) => (
                               <option
                                 key={
                                   supplier.id
@@ -1333,7 +1525,7 @@ export default function PurchasingPage() {
                                 }
                                 )
                               </option>
-                            )
+                            ),
                           )}
                         </select>
                       </div>
@@ -1353,11 +1545,12 @@ export default function PurchasingPage() {
                             orderDate
                           }
                           onChange={(
-                            event
+                            event,
                           ) =>
                             setOrderDate(
-                              event.target
-                                .value
+                              event
+                                .target
+                                .value,
                             )
                           }
                           className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -1375,11 +1568,12 @@ export default function PurchasingPage() {
                         maxLength={1000}
                         value={notes}
                         onChange={(
-                          event
+                          event,
                         ) =>
                           setNotes(
-                            event.target
-                              .value
+                            event
+                              .target
+                              .value,
                           )
                         }
                         placeholder="Optional purchasing notes..."
@@ -1396,13 +1590,18 @@ export default function PurchasingPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-ink-muted">
-                          Add each product once with its ordered quantity and unit cost.
+                          Add each product once
+                          with its ordered
+                          quantity and unit
+                          cost.
                         </p>
                       </div>
 
                       <button
                         type="button"
-                        onClick={addLine}
+                        onClick={
+                          addLine
+                        }
                         className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink-secondary hover:bg-surface-hover"
                       >
                         <PlusIcon />
@@ -1438,24 +1637,24 @@ export default function PurchasingPage() {
                           {lines.map(
                             (
                               line,
-                              index
+                              index,
                             ) => {
                               const quantity =
                                 Number(
-                                  line.orderedQuantity
+                                  line.orderedQuantity,
                                 );
 
                               const unitCost =
                                 Number(
-                                  line.unitCost
+                                  line.unitCost,
                                 );
 
                               const lineTotal =
                                 Number.isFinite(
-                                  quantity
+                                  quantity,
                                 ) &&
                                 Number.isFinite(
-                                  unitCost
+                                  unitCost,
                                 )
                                   ? quantity *
                                     unitCost
@@ -1463,7 +1662,9 @@ export default function PurchasingPage() {
 
                               return (
                                 <tr
-                                  key={index}
+                                  key={
+                                    index
+                                  }
                                   className="border-b border-line last:border-0"
                                 >
                                   <td className="px-4 py-3">
@@ -1472,14 +1673,14 @@ export default function PurchasingPage() {
                                         line.productId
                                       }
                                       onChange={(
-                                        event
+                                        event,
                                       ) =>
                                         updateLine(
                                           index,
                                           "productId",
                                           event
                                             .target
-                                            .value
+                                            .value,
                                         )
                                       }
                                       className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -1490,7 +1691,7 @@ export default function PurchasingPage() {
 
                                       {activeProducts.map(
                                         (
-                                          product
+                                          product,
                                         ) => (
                                           <option
                                             key={
@@ -1508,7 +1709,7 @@ export default function PurchasingPage() {
                                               product.name
                                             }
                                           </option>
-                                        )
+                                        ),
                                       )}
                                     </select>
                                   </td>
@@ -1522,14 +1723,14 @@ export default function PurchasingPage() {
                                         line.orderedQuantity
                                       }
                                       onChange={(
-                                        event
+                                        event,
                                       ) =>
                                         updateLine(
                                           index,
                                           "orderedQuantity",
                                           event
                                             .target
-                                            .value
+                                            .value,
                                         )
                                       }
                                       placeholder="0"
@@ -1546,14 +1747,14 @@ export default function PurchasingPage() {
                                         line.unitCost
                                       }
                                       onChange={(
-                                        event
+                                        event,
                                       ) =>
                                         updateLine(
                                           index,
                                           "unitCost",
                                           event
                                             .target
-                                            .value
+                                            .value,
                                         )
                                       }
                                       placeholder="0.00"
@@ -1564,7 +1765,7 @@ export default function PurchasingPage() {
                                   <td className="px-4 py-3 text-right text-sm font-medium text-ink">
                                     $
                                     {formatCurrency(
-                                      lineTotal
+                                      lineTotal,
                                     )}
                                   </td>
 
@@ -1573,7 +1774,7 @@ export default function PurchasingPage() {
                                       type="button"
                                       onClick={() =>
                                         removeLine(
-                                          index
+                                          index,
                                         )
                                       }
                                       disabled={
@@ -1587,7 +1788,7 @@ export default function PurchasingPage() {
                                   </td>
                                 </tr>
                               );
-                            }
+                            },
                           )}
                         </tbody>
                       </table>
@@ -1600,7 +1801,9 @@ export default function PurchasingPage() {
                       onClick={
                         closeCreateForm
                       }
-                      disabled={saving}
+                      disabled={
+                        saving
+                      }
                       className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:cursor-not-allowed"
                     >
                       Cancel
@@ -1608,7 +1811,9 @@ export default function PurchasingPage() {
 
                     <button
                       type="submit"
-                      disabled={saving}
+                      disabled={
+                        saving
+                      }
                       className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {saving
@@ -1637,23 +1842,26 @@ export default function PurchasingPage() {
 
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
-                          selectedOrder.status
+                          selectedOrder.status,
                         )}`}
                       >
                         {formatStatus(
-                          selectedOrder.status
+                          selectedOrder.status,
                         )}
                       </span>
                     </div>
 
                     <p className="mt-1 text-xs text-ink-muted">
-                      Purchase order details
+                      Purchase order
+                      details
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={closeView}
+                    onClick={
+                      closeView
+                    }
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink"
                     aria-label="Close"
                   >
@@ -1670,7 +1878,7 @@ export default function PurchasingPage() {
 
                       <div className="mt-1 text-sm font-medium text-ink">
                         {supplierMap.get(
-                          selectedOrder.supplierId
+                          selectedOrder.supplierId,
                         )?.name ??
                           "Unknown supplier"}
                       </div>
@@ -1683,7 +1891,7 @@ export default function PurchasingPage() {
 
                       <div className="mt-1 text-sm font-medium text-ink">
                         {formatDate(
-                          selectedOrder.orderDate
+                          selectedOrder.orderDate,
                         )}
                       </div>
                     </div>
@@ -1696,7 +1904,7 @@ export default function PurchasingPage() {
                       <div className="mt-1 text-sm font-semibold text-ink">
                         $
                         {formatCurrency(
-                          selectedOrder.totalAmount
+                          selectedOrder.totalAmount,
                         )}
                       </div>
                     </div>
@@ -1748,27 +1956,25 @@ export default function PurchasingPage() {
                             (line) => {
                               const product =
                                 productMap.get(
-                                  line.productId
+                                  line.productId,
                                 );
 
                               return (
                                 <tr
-                                  key={line.id}
+                                  key={
+                                    line.id
+                                  }
                                   className="border-b border-line last:border-0"
                                 >
                                   <td className="px-4 py-3">
                                     <div className="text-sm font-medium text-ink">
-                                      {
-                                        product?.name ??
-                                        "Unknown product"
-                                      }
+                                      {product?.name ??
+                                        "Unknown product"}
                                     </div>
 
                                     <div className="mt-0.5 text-xs text-ink-muted">
-                                      {
-                                        product?.sku ??
-                                        line.productId
-                                      }
+                                      {product?.sku ??
+                                        line.productId}
                                     </div>
                                   </td>
 
@@ -1777,26 +1983,26 @@ export default function PurchasingPage() {
                                       undefined,
                                       {
                                         maximumFractionDigits: 4,
-                                      }
+                                      },
                                     )}
                                   </td>
 
                                   <td className="px-4 py-3 text-right text-sm text-ink-secondary">
                                     $
                                     {formatCurrency(
-                                      line.unitCost
+                                      line.unitCost,
                                     )}
                                   </td>
 
                                   <td className="px-4 py-3 text-right text-sm font-medium text-ink">
                                     $
                                     {formatCurrency(
-                                      line.lineTotal
+                                      line.lineTotal,
                                     )}
                                   </td>
                                 </tr>
                               );
-                            }
+                            },
                           )}
                         </tbody>
 
@@ -1812,7 +2018,7 @@ export default function PurchasingPage() {
                             <td className="px-4 py-4 text-right text-sm font-bold text-ink">
                               $
                               {formatCurrency(
-                                selectedOrder.totalAmount
+                                selectedOrder.totalAmount,
                               )}
                             </td>
                           </tr>
@@ -1830,12 +2036,13 @@ export default function PurchasingPage() {
                           onClick={() =>
                             openActionDialog(
                               "submit",
-                              selectedOrder
+                              selectedOrder,
                             )
                           }
                           className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
                         >
-                          Submit for Approval
+                          Submit for
+                          Approval
                         </button>
                       )}
 
@@ -1847,18 +2054,21 @@ export default function PurchasingPage() {
                           onClick={() =>
                             openActionDialog(
                               "approve",
-                              selectedOrder
+                              selectedOrder,
                             )
                           }
                           className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
                         >
-                          Approve Purchase Order
+                          Approve
+                          Purchase Order
                         </button>
                       )}
 
                     <button
                       type="button"
-                      onClick={closeView}
+                      onClick={
+                        closeView
+                      }
                       className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
                     >
                       Close
@@ -1914,9 +2124,9 @@ export default function PurchasingPage() {
                     {actionLoading
                       ? "Processing..."
                       : dialogType ===
-                        "submit"
-                      ? "Submit"
-                      : "Approve"}
+                          "submit"
+                        ? "Submit"
+                        : "Approve"}
                   </button>
                 </div>
               </div>
