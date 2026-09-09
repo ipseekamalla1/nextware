@@ -1,12 +1,6 @@
-
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import {
   AlertIcon,
@@ -15,16 +9,8 @@ import {
   PlusIcon,
   SearchIcon,
 } from "@/components/ui/icons";
-import {
-  getCurrentCompanyId,
-  hasPermission,
-} from "@/lib/auth";
-import {
-  getProducts,
-  getSuppliers,
-  Product,
-  Supplier,
-} from "@/lib/api";
+import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
+import { getProducts, getSuppliers, Product, Supplier } from "@/lib/api";
 import {
   approvePurchaseOrder,
   createPurchaseOrder,
@@ -77,24 +63,17 @@ const statusOptions: {
   },
 ];
 
-function formatStatus(
-  status: PurchaseOrderStatus,
-): string {
+function formatStatus(status: PurchaseOrderStatus): string {
   switch (status) {
     case "PARTIALLY_RECEIVED":
       return "Partially Received";
 
     default:
-      return (
-        status.charAt(0) +
-        status.slice(1).toLowerCase()
-      );
+      return status.charAt(0) + status.slice(1).toLowerCase();
   }
 }
 
-function statusClass(
-  status: PurchaseOrderStatus,
-): string {
+function statusClass(status: PurchaseOrderStatus): string {
   switch (status) {
     case "DRAFT":
       return "bg-surface-active text-ink-secondary";
@@ -119,21 +98,15 @@ function statusClass(
   }
 }
 
-function formatCurrency(
-  value: number,
-): string {
+function formatCurrency(value: number): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function formatDate(
-  value: string,
-): string {
-  const date = new Date(
-    `${value}T00:00:00`,
-  );
+function formatDate(value: string): string {
+  const date = new Date(`${value}T00:00:00`);
 
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -153,114 +126,67 @@ function emptyLine(): DraftLine {
 export default function PurchasingPage() {
   const companyId = getCurrentCompanyId();
 
-  const canCreate = hasPermission(
-    "PURCHASE_ORDER_CREATE",
-  );
+  const canCreate = hasPermission("PURCHASE_ORDER_CREATE");
 
-  const canApprove = hasPermission(
-    "PURCHASE_ORDER_APPROVE",
-  );
+  const canApprove = hasPermission("PURCHASE_ORDER_APPROVE");
 
   /*
    * null = still loading
    * []   = loaded successfully with no purchase orders
    * [...] = loaded successfully
    */
-  const [
-    purchaseOrders,
-    setPurchaseOrders,
-  ] = useState<PurchaseOrder[] | null>(
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[] | null>(
     null,
   );
 
-  const [suppliers, setSuppliers] =
-    useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [error, setError] =
-    useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
-  const [
-    statusFilter,
-    setStatusFilter,
-  ] = useState<PurchaseOrderStatus | "">(
+  const [statusFilter, setStatusFilter] = useState<PurchaseOrderStatus | "">(
     "",
   );
 
-  const [
-    supplierFilter,
-    setSupplierFilter,
-  ] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
 
-  const [
-    showCreateForm,
-    setShowCreateForm,
-  ] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const [showView, setShowView] =
-    useState(false);
+  const [showView, setShowView] = useState(false);
 
-  const [
-    selectedOrder,
-    setSelectedOrder,
-  ] = useState<PurchaseOrder | null>(
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
   );
 
-  const [orderNumber, setOrderNumber] =
-    useState("");
+  const [orderNumber, setOrderNumber] = useState("");
 
-  const [supplierId, setSupplierId] =
-    useState("");
+  const [supplierId, setSupplierId] = useState("");
 
-  const [orderDate, setOrderDate] =
-    useState(
-      new Date()
-        .toISOString()
-        .slice(0, 10),
-    );
-
-  const [notes, setNotes] =
-    useState("");
-
-  const [lines, setLines] =
-    useState<DraftLine[]>([
-      emptyLine(),
-    ]);
-
-  const [formError, setFormError] =
-    useState<string | null>(null);
-
-  const [saving, setSaving] =
-    useState(false);
-
-  const [
-    dialogType,
-    setDialogType,
-  ] = useState<DialogType>(null);
-
-  const [
-    dialogOrder,
-    setDialogOrder,
-  ] = useState<PurchaseOrder | null>(
-    null,
+  const [orderDate, setOrderDate] = useState(
+    new Date().toISOString().slice(0, 10),
   );
 
-  const [
-    actionLoading,
-    setActionLoading,
-  ] = useState(false);
+  const [notes, setNotes] = useState("");
 
-  const [toast, setToast] =
-    useState<{
-      type: "success" | "error";
-      message: string;
-    } | null>(null);
+  const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
+
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [saving, setSaving] = useState(false);
+
+  const [dialogType, setDialogType] = useState<DialogType>(null);
+
+  const [dialogOrder, setDialogOrder] = useState<PurchaseOrder | null>(null);
+
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   /*
    * Load purchasing data.
@@ -269,50 +195,29 @@ export default function PurchasingPage() {
    * required string so TypeScript never receives
    * string | null here.
    */
-  const loadData = useCallback(
-    async (activeCompanyId: string) => {
-      try {
-        setError(null);
+  const loadData = useCallback(async (activeCompanyId: string) => {
+    try {
+      setError(null);
 
-        const [
-          purchaseOrderData,
-          supplierData,
-          productData,
-        ] = await Promise.all([
-          getPurchaseOrders(
-            activeCompanyId,
-          ),
-          getSuppliers(
-            activeCompanyId,
-          ),
-          getProducts(
-            activeCompanyId,
-          ),
-        ]);
+      const [purchaseOrderData, supplierData, productData] = await Promise.all([
+        getPurchaseOrders(activeCompanyId),
+        getSuppliers(activeCompanyId),
+        getProducts(activeCompanyId),
+      ]);
 
-        setPurchaseOrders(
-          purchaseOrderData,
-        );
+      setPurchaseOrders(purchaseOrderData);
 
-        setSuppliers(
-          supplierData,
-        );
+      setSuppliers(supplierData);
 
-        setProducts(
-          productData,
-        );
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load purchasing data.",
-        );
+      setProducts(productData);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load purchasing data.",
+      );
 
-        setPurchaseOrders([]);
-      }
-    },
-    [],
-  );
+      setPurchaseOrders([]);
+    }
+  }, []);
 
   /*
    * Initial data loading.
@@ -335,11 +240,7 @@ export default function PurchasingPage() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [
-    companyId,
-    canCreate,
-    loadData,
-  ]);
+  }, [companyId, canCreate, loadData]);
 
   /*
    * Toast auto-dismiss.
@@ -359,58 +260,28 @@ export default function PurchasingPage() {
   }, [toast]);
 
   const supplierMap = useMemo(
-    () =>
-      new Map(
-        suppliers.map(
-          (supplier) => [
-            supplier.id,
-            supplier,
-          ],
-        ),
-      ),
+    () => new Map(suppliers.map((supplier) => [supplier.id, supplier])),
     [suppliers],
   );
 
   const productMap = useMemo(
-    () =>
-      new Map(
-        products.map(
-          (product) => [
-            product.id,
-            product,
-          ],
-        ),
-      ),
+    () => new Map(products.map((product) => [product.id, product])),
     [products],
   );
 
   const activeSuppliers = useMemo(
     () =>
       suppliers
-        .filter(
-          (supplier) =>
-            supplier.active,
-        )
-        .sort((a, b) =>
-          a.name.localeCompare(
-            b.name,
-          ),
-        ),
+        .filter((supplier) => supplier.active)
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [suppliers],
   );
 
   const activeProducts = useMemo(
     () =>
       products
-        .filter(
-          (product) =>
-            product.active,
-        )
-        .sort((a, b) =>
-          a.sku.localeCompare(
-            b.sku,
-          ),
-        ),
+        .filter((product) => product.active)
+        .sort((a, b) => a.sku.localeCompare(b.sku)),
     [products],
   );
 
@@ -419,99 +290,47 @@ export default function PurchasingPage() {
       return [];
     }
 
-    const normalized =
-      search.trim().toLowerCase();
+    const normalized = search.trim().toLowerCase();
 
-    return purchaseOrders.filter(
-      (order) => {
-        const supplier =
-          supplierMap.get(
-            order.supplierId,
-          );
+    return purchaseOrders.filter((order) => {
+      const supplier = supplierMap.get(order.supplierId);
 
-        const matchesSearch =
-          normalized.length === 0 ||
-          order.orderNumber
-            .toLowerCase()
-            .includes(
-              normalized,
-            ) ||
-          (
-            supplier?.name ?? ""
-          )
-            .toLowerCase()
-            .includes(
-              normalized,
-            );
+      const matchesSearch =
+        normalized.length === 0 ||
+        order.orderNumber.toLowerCase().includes(normalized) ||
+        (supplier?.name ?? "").toLowerCase().includes(normalized);
 
-        const matchesStatus =
-          !statusFilter ||
-          order.status ===
-            statusFilter;
+      const matchesStatus = !statusFilter || order.status === statusFilter;
 
-        const matchesSupplier =
-          !supplierFilter ||
-          order.supplierId ===
-            supplierFilter;
+      const matchesSupplier =
+        !supplierFilter || order.supplierId === supplierFilter;
 
-        return (
-          matchesSearch &&
-          matchesStatus &&
-          matchesSupplier
-        );
-      },
-    );
-  }, [
-    purchaseOrders,
-    supplierMap,
-    search,
-    statusFilter,
-    supplierFilter,
-  ]);
+      return matchesSearch && matchesStatus && matchesSupplier;
+    });
+  }, [purchaseOrders, supplierMap, search, statusFilter, supplierFilter]);
 
   const totalValue = useMemo(
-    () =>
-      filteredOrders.reduce(
-        (sum, order) =>
-          sum + order.totalAmount,
-        0,
-      ),
+    () => filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0),
     [filteredOrders],
   );
 
   const draftCount = useMemo(
     () =>
-      (
-        purchaseOrders ?? []
-      ).filter(
-        (order) =>
-          order.status ===
-          "DRAFT",
-      ).length,
+      (purchaseOrders ?? []).filter((order) => order.status === "DRAFT").length,
     [purchaseOrders],
   );
 
   const submittedCount = useMemo(
     () =>
-      (
-        purchaseOrders ?? []
-      ).filter(
-        (order) =>
-          order.status ===
-          "SUBMITTED",
-      ).length,
+      (purchaseOrders ?? []).filter((order) => order.status === "SUBMITTED")
+        .length,
     [purchaseOrders],
   );
 
   const approvedCount = useMemo(
     () =>
-      (
-        purchaseOrders ?? []
-      ).filter(
-        (order) =>
-          order.status ===
-          "APPROVED",
-      ).length,
+      (purchaseOrders ?? []).filter((order) => order.status === "APPROVED")
+        .length,
     [purchaseOrders],
   );
 
@@ -519,11 +338,7 @@ export default function PurchasingPage() {
     setOrderNumber("");
     setSupplierId("");
 
-    setOrderDate(
-      new Date()
-        .toISOString()
-        .slice(0, 10),
-    );
+    setOrderDate(new Date().toISOString().slice(0, 10));
 
     setNotes("");
     setLines([emptyLine()]);
@@ -548,171 +363,106 @@ export default function PurchasingPage() {
     resetForm();
   }
 
-  function updateLine(
-    index: number,
-    field: keyof DraftLine,
-    value: string,
-  ) {
+  function updateLine(index: number, field: keyof DraftLine, value: string) {
     setLines((current) =>
-      current.map(
-        (line, lineIndex) =>
-          lineIndex === index
-            ? {
-                ...line,
-                [field]: value,
-              }
-            : line,
+      current.map((line, lineIndex) =>
+        lineIndex === index
+          ? {
+              ...line,
+              [field]: value,
+            }
+          : line,
       ),
     );
   }
 
   function addLine() {
-    setLines((current) => [
-      ...current,
-      emptyLine(),
-    ]);
+    setLines((current) => [...current, emptyLine()]);
   }
 
-  function removeLine(
-    index: number,
-  ) {
+  function removeLine(index: number) {
     setLines((current) => {
       if (current.length === 1) {
         return current;
       }
 
-      return current.filter(
-        (_, lineIndex) =>
-          lineIndex !== index,
-      );
+      return current.filter((_, lineIndex) => lineIndex !== index);
     });
   }
 
-  async function handleCreate(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!companyId) {
-      setFormError(
-        "No authenticated company context is available.",
-      );
+      setFormError("No authenticated company context is available.");
       return;
     }
 
     if (!canCreate) {
-      setFormError(
-        "You do not have permission to create purchase orders.",
-      );
+      setFormError("You do not have permission to create purchase orders.");
       return;
     }
 
     if (!orderNumber.trim()) {
-      setFormError(
-        "Order number is required.",
-      );
+      setFormError("Order number is required.");
       return;
     }
 
     if (!supplierId) {
-      setFormError(
-        "Supplier is required.",
-      );
+      setFormError("Supplier is required.");
       return;
     }
 
     if (!orderDate) {
-      setFormError(
-        "Order date is required.",
-      );
+      setFormError("Order date is required.");
       return;
     }
 
     if (lines.length === 0) {
-      setFormError(
-        "At least one purchase order line is required.",
-      );
+      setFormError("At least one purchase order line is required.");
       return;
     }
 
-    const seenProducts =
-      new Set<string>();
+    const seenProducts = new Set<string>();
 
-    const parsedLines: PurchaseOrderCreateRequest["lines"] =
-      [];
+    const parsedLines: PurchaseOrderCreateRequest["lines"] = [];
 
-    for (
-      let index = 0;
-      index < lines.length;
-      index += 1
-    ) {
+    for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
 
       if (!line.productId) {
-        setFormError(
-          `Product is required on line ${
-            index + 1
-          }.`,
-        );
+        setFormError(`Product is required on line ${index + 1}.`);
         return;
       }
 
-      if (
-        seenProducts.has(
-          line.productId,
-        )
-      ) {
+      if (seenProducts.has(line.productId)) {
         setFormError(
           "A product cannot appear more than once on the same purchase order.",
         );
         return;
       }
 
-      seenProducts.add(
-        line.productId,
-      );
+      seenProducts.add(line.productId);
 
-      const quantity = Number(
-        line.orderedQuantity,
-      );
+      const quantity = Number(line.orderedQuantity);
 
-      const unitCost = Number(
-        line.unitCost,
-      );
+      const unitCost = Number(line.unitCost);
 
-      if (
-        !Number.isFinite(
-          quantity,
-        ) ||
-        quantity <= 0
-      ) {
+      if (!Number.isFinite(quantity) || quantity <= 0) {
         setFormError(
-          `Ordered quantity must be greater than zero on line ${
-            index + 1
-          }.`,
+          `Ordered quantity must be greater than zero on line ${index + 1}.`,
         );
         return;
       }
 
-      if (
-        !Number.isFinite(
-          unitCost,
-        ) ||
-        unitCost < 0
-      ) {
-        setFormError(
-          `Unit cost cannot be negative on line ${
-            index + 1
-          }.`,
-        );
+      if (!Number.isFinite(unitCost) || unitCost < 0) {
+        setFormError(`Unit cost cannot be negative on line ${index + 1}.`);
         return;
       }
 
       parsedLines.push({
-        productId:
-          line.productId,
-        orderedQuantity:
-          quantity,
+        productId: line.productId,
+        orderedQuantity: quantity,
         unitCost,
       });
     }
@@ -721,74 +471,48 @@ export default function PurchasingPage() {
       setSaving(true);
       setFormError(null);
 
-      const request: PurchaseOrderCreateRequest =
-        {
-          companyId,
-          supplierId,
-          orderNumber:
-            orderNumber.trim(),
-          orderDate,
-          notes:
-            notes.trim() || null,
-          lines: parsedLines,
-        };
+      const request: PurchaseOrderCreateRequest = {
+        companyId,
+        supplierId,
+        orderNumber: orderNumber.trim(),
+        orderDate,
+        notes: notes.trim() || null,
+        lines: parsedLines,
+      };
 
-      const created =
-        await createPurchaseOrder(
-          request,
-        );
+      const created = await createPurchaseOrder(request);
 
-      setPurchaseOrders(
-        (current) => [
-          created,
-          ...(current ?? []),
-        ],
-      );
+      setPurchaseOrders((current) => [created, ...(current ?? [])]);
 
       setShowCreateForm(false);
       resetForm();
 
       setToast({
         type: "success",
-        message:
-          "Purchase order created successfully.",
+        message: "Purchase order created successfully.",
       });
     } catch (err) {
       setFormError(
-        err instanceof Error
-          ? err.message
-          : "Failed to create purchase order.",
+        err instanceof Error ? err.message : "Failed to create purchase order.",
       );
     } finally {
       setSaving(false);
     }
   }
 
-  async function openOrder(
-    order: PurchaseOrder,
-  ) {
+  async function openOrder(order: PurchaseOrder) {
     if (!companyId) {
       return;
     }
 
-    const activeCompanyId =
-      companyId;
+    const activeCompanyId = companyId;
 
     try {
-      const freshOrders =
-        await getPurchaseOrders(
-          activeCompanyId,
-        );
+      const freshOrders = await getPurchaseOrders(activeCompanyId);
 
-      const found =
-        freshOrders.find(
-          (item) =>
-            item.id === order.id,
-        );
+      const found = freshOrders.find((item) => item.id === order.id);
 
-      setSelectedOrder(
-        found ?? order,
-      );
+      setSelectedOrder(found ?? order);
 
       setShowView(true);
     } catch {
@@ -802,12 +526,7 @@ export default function PurchasingPage() {
     setSelectedOrder(null);
   }
 
-  function openActionDialog(
-    type:
-      | "submit"
-      | "approve",
-    order: PurchaseOrder,
-  ) {
+  function openActionDialog(type: "submit" | "approve", order: PurchaseOrder) {
     setDialogType(type);
     setDialogOrder(order);
   }
@@ -822,37 +541,24 @@ export default function PurchasingPage() {
   }
 
   async function confirmAction() {
-    if (
-      !companyId ||
-      !dialogType ||
-      !dialogOrder
-    ) {
+    if (!companyId || !dialogType || !dialogOrder) {
       return;
     }
 
-    const activeCompanyId =
-      companyId;
+    const activeCompanyId = companyId;
 
-    if (
-      dialogType === "submit" &&
-      !canCreate
-    ) {
+    if (dialogType === "submit" && !canCreate) {
       setToast({
         type: "error",
-        message:
-          "You do not have permission to submit purchase orders.",
+        message: "You do not have permission to submit purchase orders.",
       });
       return;
     }
 
-    if (
-      dialogType === "approve" &&
-      !canApprove
-    ) {
+    if (dialogType === "approve" && !canApprove) {
       setToast({
         type: "error",
-        message:
-          "You do not have permission to approve purchase orders.",
+        message: "You do not have permission to approve purchase orders.",
       });
       return;
     }
@@ -862,48 +568,26 @@ export default function PurchasingPage() {
 
       let updated: PurchaseOrder;
 
-      if (
-        dialogType === "submit"
-      ) {
-        updated =
-          await submitPurchaseOrder(
-            activeCompanyId,
-            dialogOrder.id,
-          );
+      if (dialogType === "submit") {
+        updated = await submitPurchaseOrder(activeCompanyId, dialogOrder.id);
       } else {
-        updated =
-          await approvePurchaseOrder(
-            activeCompanyId,
-            dialogOrder.id,
-          );
+        updated = await approvePurchaseOrder(activeCompanyId, dialogOrder.id);
       }
 
-      setPurchaseOrders(
-        (current) =>
-          (
-            current ?? []
-          ).map(
-            (purchaseOrder) =>
-              purchaseOrder.id ===
-              updated.id
-                ? updated
-                : purchaseOrder,
-          ),
+      setPurchaseOrders((current) =>
+        (current ?? []).map((purchaseOrder) =>
+          purchaseOrder.id === updated.id ? updated : purchaseOrder,
+        ),
       );
 
-      setSelectedOrder(
-        (current) =>
-          current?.id ===
-          updated.id
-            ? updated
-            : current,
+      setSelectedOrder((current) =>
+        current?.id === updated.id ? updated : current,
       );
 
       setToast({
         type: "success",
         message:
-          dialogType ===
-          "submit"
+          dialogType === "submit"
             ? "Purchase order submitted successfully."
             : "Purchase order approved successfully.",
       });
@@ -932,8 +616,7 @@ export default function PurchasingPage() {
             </h1>
 
             <p className="mt-2 text-sm text-ink-muted">
-              Please sign in again to
-              access purchasing.
+              Please sign in again to access purchasing.
             </p>
           </div>
         </div>
@@ -955,9 +638,7 @@ export default function PurchasingPage() {
             </h1>
 
             <p className="mt-2 text-sm text-ink-muted">
-              Your account does not
-              have permission to access
-              purchasing.
+              Your account does not have permission to access purchasing.
             </p>
           </div>
         </div>
@@ -971,21 +652,16 @@ export default function PurchasingPage() {
         <div className="border-b border-line bg-surface">
           <div className="flex flex-col gap-4 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-ink">
-                Purchasing
-              </h1>
+              <h1 className="text-xl font-semibold text-ink">Purchasing</h1>
 
               <p className="mt-1 text-sm text-ink-muted">
-                Create, submit, and
-                approve purchase orders.
+                Create, submit, and approve purchase orders.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={
-                openCreateForm
-              }
+              onClick={openCreateForm}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
             >
               <PlusIcon />
@@ -998,28 +674,18 @@ export default function PurchasingPage() {
           {toast && (
             <div
               className={`mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-                toast.type ===
-                "success"
+                toast.type === "success"
                   ? "border-success/20 bg-success/10 text-success"
                   : "border-danger/20 bg-danger/10 text-danger"
               }`}
             >
-              {toast.type ===
-              "success" ? (
-                <CheckIcon />
-              ) : (
-                <AlertIcon />
-              )}
+              {toast.type === "success" ? <CheckIcon /> : <AlertIcon />}
 
-              <span className="flex-1">
-                {toast.message}
-              </span>
+              <span className="flex-1">{toast.message}</span>
 
               <button
                 type="button"
-                onClick={() =>
-                  setToast(null)
-                }
+                onClick={() => setToast(null)}
                 className="opacity-70 hover:opacity-100"
               >
                 <CloseIcon />
@@ -1031,17 +697,11 @@ export default function PurchasingPage() {
             <div className="mb-5 flex items-start gap-3 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
               <AlertIcon />
 
-              <span className="flex-1">
-                {error}
-              </span>
+              <span className="flex-1">{error}</span>
 
               <button
                 type="button"
-                onClick={() =>
-                  void loadData(
-                    companyId,
-                  )
-                }
+                onClick={() => void loadData(companyId)}
                 className="font-semibold underline"
               >
                 Retry
@@ -1056,8 +716,7 @@ export default function PurchasingPage() {
               </div>
 
               <div className="mt-2 text-2xl font-semibold text-ink">
-                {purchaseOrders?.length ??
-                  0}
+                {purchaseOrders?.length ?? 0}
               </div>
             </div>
 
@@ -1100,13 +759,7 @@ export default function PurchasingPage() {
                 <input
                   type="text"
                   value={search}
-                  onChange={(
-                    event,
-                  ) =>
-                    setSearch(
-                      event.target.value,
-                    )
-                  }
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search order number or supplier..."
                   className="w-full rounded-lg border border-line bg-surface px-10 py-2.5 text-sm text-ink outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                 />
@@ -1114,69 +767,32 @@ export default function PurchasingPage() {
 
               <select
                 value={statusFilter}
-                onChange={(
-                  event,
-                ) =>
+                onChange={(event) =>
                   setStatusFilter(
-                    event.target
-                      .value as
-                      | PurchaseOrderStatus
-                      | "",
+                    event.target.value as PurchaseOrderStatus | "",
                   )
                 }
                 className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
               >
-                {statusOptions.map(
-                  (option) => (
-                    <option
-                      key={
-                        option.value
-                      }
-                      value={
-                        option.value
-                      }
-                    >
-                      {
-                        option.label
-                      }
-                    </option>
-                  ),
-                )}
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
 
               <select
-                value={
-                  supplierFilter
-                }
-                onChange={(
-                  event,
-                ) =>
-                  setSupplierFilter(
-                    event.target.value,
-                  )
-                }
+                value={supplierFilter}
+                onChange={(event) => setSupplierFilter(event.target.value)}
                 className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
               >
-                <option value="">
-                  All suppliers
-                </option>
+                <option value="">All suppliers</option>
 
-                {suppliers.map(
-                  (supplier) => (
-                    <option
-                      key={
-                        supplier.id
-                      }
-                      value={
-                        supplier.id
-                      }
-                    >
-                      {
-                        supplier.name
-                      }
-                    </option>
-                  ),
-                )}
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -1189,43 +805,29 @@ export default function PurchasingPage() {
                 </h2>
 
                 <p className="mt-1 text-xs text-ink-muted">
-                  {
-                    filteredOrders.length
-                  }{" "}
-                  orders {" · "}
-                  Total value $
-                  {formatCurrency(
-                    totalValue,
-                  )}
+                  {filteredOrders.length} orders {" · "}
+                  Total value ${formatCurrency(totalValue)}
                 </p>
               </div>
             </div>
 
-            {purchaseOrders ===
-            null ? (
+            {purchaseOrders === null ? (
               <div className="px-5 py-12 text-center text-sm text-ink-muted">
-                Loading purchase
-                orders...
+                Loading purchase orders...
               </div>
-            ) : filteredOrders.length ===
-              0 ? (
+            ) : filteredOrders.length === 0 ? (
               <div className="px-5 py-16 text-center">
                 <div className="text-sm font-semibold text-ink">
-                  No purchase orders
-                  found
+                  No purchase orders found
                 </div>
 
                 <p className="mt-1 text-sm text-ink-muted">
-                  Create your first
-                  purchase order to
-                  get started.
+                  Create your first purchase order to get started.
                 </p>
 
                 <button
                   type="button"
-                  onClick={
-                    openCreateForm
-                  }
+                  onClick={openCreateForm}
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                 >
                   <PlusIcon />
@@ -1237,29 +839,19 @@ export default function PurchasingPage() {
                 <table className="w-full min-w-[900px] text-left">
                   <thead>
                     <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-muted">
-                      <th className="px-5 py-3 font-semibold">
-                        Order
-                      </th>
+                      <th className="px-5 py-3 font-semibold">Order</th>
 
-                      <th className="px-5 py-3 font-semibold">
-                        Supplier
-                      </th>
+                      <th className="px-5 py-3 font-semibold">Supplier</th>
 
-                      <th className="px-5 py-3 font-semibold">
-                        Date
-                      </th>
+                      <th className="px-5 py-3 font-semibold">Date</th>
 
-                      <th className="px-5 py-3 font-semibold">
-                        Lines
-                      </th>
+                      <th className="px-5 py-3 font-semibold">Lines</th>
 
                       <th className="px-5 py-3 text-right font-semibold">
                         Total
                       </th>
 
-                      <th className="px-5 py-3 font-semibold">
-                        Status
-                      </th>
+                      <th className="px-5 py-3 font-semibold">Status</th>
 
                       <th className="px-5 py-3 text-right font-semibold">
                         Actions
@@ -1268,127 +860,88 @@ export default function PurchasingPage() {
                   </thead>
 
                   <tbody>
-                    {filteredOrders.map(
-                      (order) => {
-                        const supplier =
-                          supplierMap.get(
-                            order.supplierId,
-                          );
+                    {filteredOrders.map((order) => {
+                      const supplier = supplierMap.get(order.supplierId);
 
-                        return (
-                          <tr
-                            key={
-                              order.id
-                            }
-                            className="border-b border-line last:border-0 hover:bg-surface-hover"
-                          >
-                            <td className="px-5 py-4">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void openOrder(
-                                    order,
-                                  )
-                                }
-                                className="font-semibold text-primary-600 hover:text-primary-700 hover:underline"
-                              >
-                                {
-                                  order.orderNumber
-                                }
-                              </button>
-                            </td>
+                      return (
+                        <tr
+                          key={order.id}
+                          className="border-b border-line last:border-0 hover:bg-surface-hover"
+                        >
+                          <td className="px-5 py-4">
+                            <button
+                              type="button"
+                              onClick={() => void openOrder(order)}
+                              className="font-semibold text-primary-600 hover:text-primary-700 hover:underline"
+                            >
+                              {order.orderNumber}
+                            </button>
+                          </td>
 
-                            <td className="px-5 py-4 text-sm text-ink-secondary">
-                              {supplier?.name ??
-                                "Unknown supplier"}
-                            </td>
+                          <td className="px-5 py-4 text-sm text-ink-secondary">
+                            {supplier?.name ?? "Unknown supplier"}
+                          </td>
 
-                            <td className="px-5 py-4 text-sm text-ink-secondary">
-                              {formatDate(
-                                order.orderDate,
-                              )}
-                            </td>
+                          <td className="px-5 py-4 text-sm text-ink-secondary">
+                            {formatDate(order.orderDate)}
+                          </td>
 
-                            <td className="px-5 py-4 text-sm text-ink-secondary">
-                              {
-                                order
-                                  .lines
-                                  .length
-                              }
-                            </td>
+                          <td className="px-5 py-4 text-sm text-ink-secondary">
+                            {order.lines.length}
+                          </td>
 
-                            <td className="px-5 py-4 text-right text-sm font-medium text-ink">
-                              $
-                              {formatCurrency(
-                                order.totalAmount,
-                              )}
-                            </td>
+                          <td className="px-5 py-4 text-right text-sm font-medium text-ink">
+                            ${formatCurrency(order.totalAmount)}
+                          </td>
 
-                            <td className="px-5 py-4">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
-                                  order.status,
-                                )}`}
-                              >
-                                {formatStatus(
-                                  order.status,
-                                )}
-                              </span>
-                            </td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
+                                order.status,
+                              )}`}
+                            >
+                              {formatStatus(order.status)}
+                            </span>
+                          </td>
 
-                            <td className="px-5 py-4">
-                              <div className="flex justify-end gap-2">
-                                {order.status ===
-                                  "DRAFT" &&
-                                  canCreate && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openActionDialog(
-                                          "submit",
-                                          order,
-                                        )
-                                      }
-                                      className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-surface-hover"
-                                    >
-                                      Submit
-                                    </button>
-                                  )}
-
-                                {order.status ===
-                                  "SUBMITTED" &&
-                                  canApprove && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openActionDialog(
-                                          "approve",
-                                          order,
-                                        )
-                                      }
-                                      className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-700"
-                                    >
-                                      Approve
-                                    </button>
-                                  )}
-
+                          <td className="px-5 py-4">
+                            <div className="flex justify-end gap-2">
+                              {order.status === "DRAFT" && canCreate && (
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    void openOrder(
-                                      order,
-                                    )
+                                    openActionDialog("submit", order)
                                   }
                                   className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-surface-hover"
                                 >
-                                  View
+                                  Submit
                                 </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      },
-                    )}
+                              )}
+
+                              {order.status === "SUBMITTED" && canApprove && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openActionDialog("approve", order)
+                                  }
+                                  className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-700"
+                                >
+                                  Approve
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => void openOrder(order)}
+                                className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-surface-hover"
+                              >
+                                View
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1406,17 +959,13 @@ export default function PurchasingPage() {
                   </h2>
 
                   <p className="mt-1 text-xs text-ink-muted">
-                    Create a draft purchase
-                    order for an active
-                    supplier.
+                    Create a draft purchase order for an active supplier.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={
-                    closeCreateForm
-                  }
+                  onClick={closeCreateForm}
                   disabled={saving}
                   className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink disabled:cursor-not-allowed"
                   aria-label="Close"
@@ -1425,19 +974,13 @@ export default function PurchasingPage() {
                 </button>
               </div>
 
-              <form
-                onSubmit={
-                  handleCreate
-                }
-              >
+              <form onSubmit={handleCreate}>
                 <div className="space-y-7 px-6 py-6">
                   {formError && (
                     <div className="flex items-start gap-3 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
                       <AlertIcon />
 
-                      <span>
-                        {formError}
-                      </span>
+                      <span>{formError}</span>
                     </div>
                   )}
 
@@ -1449,27 +992,16 @@ export default function PurchasingPage() {
                     <div className="grid gap-5 md:grid-cols-3">
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                          Order Number{" "}
-                          <span className="text-danger">
-                            *
-                          </span>
+                          Order Number <span className="text-danger">*</span>
                         </label>
 
                         <input
                           type="text"
                           required
                           maxLength={100}
-                          value={
-                            orderNumber
-                          }
-                          onChange={(
-                            event,
-                          ) =>
-                            setOrderNumber(
-                              event
-                                .target
-                                .value,
-                            )
+                          value={orderNumber}
+                          onChange={(event) =>
+                            setOrderNumber(event.target.value)
                           }
                           placeholder="PO-1001"
                           className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -1478,81 +1010,37 @@ export default function PurchasingPage() {
 
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                          Supplier{" "}
-                          <span className="text-danger">
-                            *
-                          </span>
+                          Supplier <span className="text-danger">*</span>
                         </label>
 
                         <select
                           required
-                          value={
-                            supplierId
-                          }
-                          onChange={(
-                            event,
-                          ) =>
-                            setSupplierId(
-                              event
-                                .target
-                                .value,
-                            )
+                          value={supplierId}
+                          onChange={(event) =>
+                            setSupplierId(event.target.value)
                           }
                           className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                         >
-                          <option value="">
-                            Select supplier
-                          </option>
+                          <option value="">Select supplier</option>
 
-                          {activeSuppliers.map(
-                            (
-                              supplier,
-                            ) => (
-                              <option
-                                key={
-                                  supplier.id
-                                }
-                                value={
-                                  supplier.id
-                                }
-                              >
-                                {
-                                  supplier.name
-                                }{" "}
-                                (
-                                {
-                                  supplier.supplierCode
-                                }
-                                )
-                              </option>
-                            ),
-                          )}
+                          {activeSuppliers.map((supplier) => (
+                            <option key={supplier.id} value={supplier.id}>
+                              {supplier.name} ({supplier.supplierCode})
+                            </option>
+                          ))}
                         </select>
                       </div>
 
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-ink-secondary">
-                          Order Date{" "}
-                          <span className="text-danger">
-                            *
-                          </span>
+                          Order Date <span className="text-danger">*</span>
                         </label>
 
                         <input
                           type="date"
                           required
-                          value={
-                            orderDate
-                          }
-                          onChange={(
-                            event,
-                          ) =>
-                            setOrderDate(
-                              event
-                                .target
-                                .value,
-                            )
-                          }
+                          value={orderDate}
+                          onChange={(event) => setOrderDate(event.target.value)}
                           className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                         />
                       </div>
@@ -1567,15 +1055,7 @@ export default function PurchasingPage() {
                         rows={3}
                         maxLength={1000}
                         value={notes}
-                        onChange={(
-                          event,
-                        ) =>
-                          setNotes(
-                            event
-                              .target
-                              .value,
-                          )
-                        }
+                        onChange={(event) => setNotes(event.target.value)}
                         placeholder="Optional purchasing notes..."
                         className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                       />
@@ -1590,18 +1070,14 @@ export default function PurchasingPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-ink-muted">
-                          Add each product once
-                          with its ordered
-                          quantity and unit
-                          cost.
+                          Add each product once with its ordered quantity and
+                          unit cost.
                         </p>
                       </div>
 
                       <button
                         type="button"
-                        onClick={
-                          addLine
-                        }
+                        onClick={addLine}
                         className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink-secondary hover:bg-surface-hover"
                       >
                         <PlusIcon />
@@ -1613,9 +1089,7 @@ export default function PurchasingPage() {
                       <table className="w-full min-w-[760px] text-left">
                         <thead>
                           <tr className="border-b border-line bg-surface-active text-xs uppercase tracking-wide text-ink-muted">
-                            <th className="px-4 py-3 font-semibold">
-                              Product
-                            </th>
+                            <th className="px-4 py-3 font-semibold">Product</th>
 
                             <th className="px-4 py-3 font-semibold">
                               Quantity
@@ -1634,162 +1108,100 @@ export default function PurchasingPage() {
                         </thead>
 
                         <tbody>
-                          {lines.map(
-                            (
-                              line,
-                              index,
-                            ) => {
-                              const quantity =
-                                Number(
-                                  line.orderedQuantity,
-                                );
+                          {lines.map((line, index) => {
+                            const quantity = Number(line.orderedQuantity);
 
-                              const unitCost =
-                                Number(
-                                  line.unitCost,
-                                );
+                            const unitCost = Number(line.unitCost);
 
-                              const lineTotal =
-                                Number.isFinite(
-                                  quantity,
-                                ) &&
-                                Number.isFinite(
-                                  unitCost,
-                                )
-                                  ? quantity *
-                                    unitCost
-                                  : 0;
+                            const lineTotal =
+                              Number.isFinite(quantity) &&
+                              Number.isFinite(unitCost)
+                                ? quantity * unitCost
+                                : 0;
 
-                              return (
-                                <tr
-                                  key={
-                                    index
-                                  }
-                                  className="border-b border-line last:border-0"
-                                >
-                                  <td className="px-4 py-3">
-                                    <select
-                                      value={
-                                        line.productId
-                                      }
-                                      onChange={(
-                                        event,
-                                      ) =>
-                                        updateLine(
-                                          index,
-                                          "productId",
-                                          event
-                                            .target
-                                            .value,
-                                        )
-                                      }
-                                      className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-                                    >
-                                      <option value="">
-                                        Select product
+                            return (
+                              <tr
+                                key={index}
+                                className="border-b border-line last:border-0"
+                              >
+                                <td className="px-4 py-3">
+                                  <select
+                                    value={line.productId}
+                                    onChange={(event) =>
+                                      updateLine(
+                                        index,
+                                        "productId",
+                                        event.target.value,
+                                      )
+                                    }
+                                    className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                                  >
+                                    <option value="">Select product</option>
+
+                                    {activeProducts.map((product) => (
+                                      <option
+                                        key={product.id}
+                                        value={product.id}
+                                      >
+                                        {product.sku} — {product.name}
                                       </option>
+                                    ))}
+                                  </select>
+                                </td>
 
-                                      {activeProducts.map(
-                                        (
-                                          product,
-                                        ) => (
-                                          <option
-                                            key={
-                                              product.id
-                                            }
-                                            value={
-                                              product.id
-                                            }
-                                          >
-                                            {
-                                              product.sku
-                                            }{" "}
-                                            —{" "}
-                                            {
-                                              product.name
-                                            }
-                                          </option>
-                                        ),
-                                      )}
-                                    </select>
-                                  </td>
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="number"
+                                    min="0.0001"
+                                    step="0.0001"
+                                    value={line.orderedQuantity}
+                                    onChange={(event) =>
+                                      updateLine(
+                                        index,
+                                        "orderedQuantity",
+                                        event.target.value,
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-32 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                                  />
+                                </td>
 
-                                  <td className="px-4 py-3">
-                                    <input
-                                      type="number"
-                                      min="0.0001"
-                                      step="0.0001"
-                                      value={
-                                        line.orderedQuantity
-                                      }
-                                      onChange={(
-                                        event,
-                                      ) =>
-                                        updateLine(
-                                          index,
-                                          "orderedQuantity",
-                                          event
-                                            .target
-                                            .value,
-                                        )
-                                      }
-                                      placeholder="0"
-                                      className="w-32 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-                                    />
-                                  </td>
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.0001"
+                                    value={line.unitCost}
+                                    onChange={(event) =>
+                                      updateLine(
+                                        index,
+                                        "unitCost",
+                                        event.target.value,
+                                      )
+                                    }
+                                    placeholder="0.00"
+                                    className="w-32 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                                  />
+                                </td>
 
-                                  <td className="px-4 py-3">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.0001"
-                                      value={
-                                        line.unitCost
-                                      }
-                                      onChange={(
-                                        event,
-                                      ) =>
-                                        updateLine(
-                                          index,
-                                          "unitCost",
-                                          event
-                                            .target
-                                            .value,
-                                        )
-                                      }
-                                      placeholder="0.00"
-                                      className="w-32 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-                                    />
-                                  </td>
+                                <td className="px-4 py-3 text-right text-sm font-medium text-ink">
+                                  ${formatCurrency(lineTotal)}
+                                </td>
 
-                                  <td className="px-4 py-3 text-right text-sm font-medium text-ink">
-                                    $
-                                    {formatCurrency(
-                                      lineTotal,
-                                    )}
-                                  </td>
-
-                                  <td className="px-4 py-3 text-right">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        removeLine(
-                                          index,
-                                        )
-                                      }
-                                      disabled={
-                                        lines.length ===
-                                        1
-                                      }
-                                      className="rounded-lg px-2 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                      Remove
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            },
-                          )}
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeLine(index)}
+                                    disabled={lines.length === 1}
+                                    className="rounded-lg px-2 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1798,12 +1210,8 @@ export default function PurchasingPage() {
                   <div className="flex items-center justify-end gap-3 border-t border-line pt-5">
                     <button
                       type="button"
-                      onClick={
-                        closeCreateForm
-                      }
-                      disabled={
-                        saving
-                      }
+                      onClick={closeCreateForm}
+                      disabled={saving}
                       className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:cursor-not-allowed"
                     >
                       Cancel
@@ -1811,14 +1219,10 @@ export default function PurchasingPage() {
 
                     <button
                       type="submit"
-                      disabled={
-                        saving
-                      }
+                      disabled={saving}
                       className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {saving
-                        ? "Creating..."
-                        : "Create Purchase Order"}
+                      {saving ? "Creating..." : "Create Purchase Order"}
                     </button>
                   </div>
                 </div>
@@ -1827,313 +1231,245 @@ export default function PurchasingPage() {
           </div>
         )}
 
-        {showView &&
-          selectedOrder && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
-              <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl">
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-5">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-semibold text-ink">
-                        {
-                          selectedOrder.orderNumber
-                        }
-                      </h2>
+        {showView && selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-5">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-ink">
+                      {selectedOrder.orderNumber}
+                    </h2>
 
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
-                          selectedOrder.status,
-                        )}`}
-                      >
-                        {formatStatus(
-                          selectedOrder.status,
-                        )}
-                      </span>
-                    </div>
-
-                    <p className="mt-1 text-xs text-ink-muted">
-                      Purchase order
-                      details
-                    </p>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
+                        selectedOrder.status,
+                      )}`}
+                    >
+                      {formatStatus(selectedOrder.status)}
+                    </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={
-                      closeView
-                    }
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink"
-                    aria-label="Close"
-                  >
-                    <CloseIcon />
-                  </button>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Purchase order details
+                  </p>
                 </div>
 
-                <div className="space-y-6 px-6 py-6">
-                  <div className="grid gap-5 md:grid-cols-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Supplier
-                      </div>
+                <button
+                  type="button"
+                  onClick={closeView}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-active hover:text-ink"
+                  aria-label="Close"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
 
-                      <div className="mt-1 text-sm font-medium text-ink">
-                        {supplierMap.get(
-                          selectedOrder.supplierId,
-                        )?.name ??
-                          "Unknown supplier"}
-                      </div>
+              <div className="space-y-6 px-6 py-6">
+                <div className="grid gap-5 md:grid-cols-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Supplier
                     </div>
 
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Order Date
-                      </div>
-
-                      <div className="mt-1 text-sm font-medium text-ink">
-                        {formatDate(
-                          selectedOrder.orderDate,
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Total
-                      </div>
-
-                      <div className="mt-1 text-sm font-semibold text-ink">
-                        $
-                        {formatCurrency(
-                          selectedOrder.totalAmount,
-                        )}
-                      </div>
+                    <div className="mt-1 text-sm font-medium text-ink">
+                      {supplierMap.get(selectedOrder.supplierId)?.name ??
+                        "Unknown supplier"}
                     </div>
                   </div>
-
-                  {selectedOrder.notes && (
-                    <div className="rounded-xl border border-line bg-surface-active p-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                        Notes
-                      </div>
-
-                      <div className="mt-2 whitespace-pre-wrap text-sm text-ink-secondary">
-                        {
-                          selectedOrder.notes
-                        }
-                      </div>
-                    </div>
-                  )}
 
                   <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Order Lines
+                    <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Order Date
                     </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-line">
-                      <table className="w-full min-w-[700px] text-left">
-                        <thead>
-                          <tr className="border-b border-line bg-surface-active text-xs uppercase tracking-wide text-ink-muted">
-                            <th className="px-4 py-3 font-semibold">
-                              Product
-                            </th>
-
-                            <th className="px-4 py-3 text-right font-semibold">
-                              Quantity
-                            </th>
-
-                            <th className="px-4 py-3 text-right font-semibold">
-                              Unit Cost
-                            </th>
-
-                            <th className="px-4 py-3 text-right font-semibold">
-                              Total
-                            </th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {selectedOrder.lines.map(
-                            (line) => {
-                              const product =
-                                productMap.get(
-                                  line.productId,
-                                );
-
-                              return (
-                                <tr
-                                  key={
-                                    line.id
-                                  }
-                                  className="border-b border-line last:border-0"
-                                >
-                                  <td className="px-4 py-3">
-                                    <div className="text-sm font-medium text-ink">
-                                      {product?.name ??
-                                        "Unknown product"}
-                                    </div>
-
-                                    <div className="mt-0.5 text-xs text-ink-muted">
-                                      {product?.sku ??
-                                        line.productId}
-                                    </div>
-                                  </td>
-
-                                  <td className="px-4 py-3 text-right text-sm text-ink-secondary">
-                                    {line.orderedQuantity.toLocaleString(
-                                      undefined,
-                                      {
-                                        maximumFractionDigits: 4,
-                                      },
-                                    )}
-                                  </td>
-
-                                  <td className="px-4 py-3 text-right text-sm text-ink-secondary">
-                                    $
-                                    {formatCurrency(
-                                      line.unitCost,
-                                    )}
-                                  </td>
-
-                                  <td className="px-4 py-3 text-right text-sm font-medium text-ink">
-                                    $
-                                    {formatCurrency(
-                                      line.lineTotal,
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            },
-                          )}
-                        </tbody>
-
-                        <tfoot>
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="px-4 py-4 text-right text-sm font-semibold text-ink"
-                            >
-                              Grand Total
-                            </td>
-
-                            <td className="px-4 py-4 text-right text-sm font-bold text-ink">
-                              $
-                              {formatCurrency(
-                                selectedOrder.totalAmount,
-                              )}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                    <div className="mt-1 text-sm font-medium text-ink">
+                      {formatDate(selectedOrder.orderDate)}
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 border-t border-line pt-5">
-                    {selectedOrder.status ===
-                      "DRAFT" &&
-                      canCreate && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openActionDialog(
-                              "submit",
-                              selectedOrder,
-                            )
-                          }
-                          className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
-                        >
-                          Submit for
-                          Approval
-                        </button>
-                      )}
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Total
+                    </div>
 
-                    {selectedOrder.status ===
-                      "SUBMITTED" &&
-                      canApprove && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openActionDialog(
-                              "approve",
-                              selectedOrder,
-                            )
-                          }
-                          className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                        >
-                          Approve
-                          Purchase Order
-                        </button>
-                      )}
+                    <div className="mt-1 text-sm font-semibold text-ink">
+                      ${formatCurrency(selectedOrder.totalAmount)}
+                    </div>
+                  </div>
+                </div>
 
+                {selectedOrder.notes && (
+                  <div className="rounded-xl border border-line bg-surface-active p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Notes
+                    </div>
+
+                    <div className="mt-2 whitespace-pre-wrap text-sm text-ink-secondary">
+                      {selectedOrder.notes}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Order Lines
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-line">
+                    <table className="w-full min-w-[700px] text-left">
+                      <thead>
+                        <tr className="border-b border-line bg-surface-active text-xs uppercase tracking-wide text-ink-muted">
+                          <th className="px-4 py-3 font-semibold">Product</th>
+
+                          <th className="px-4 py-3 text-right font-semibold">
+                            Quantity
+                          </th>
+
+                          <th className="px-4 py-3 text-right font-semibold">
+                            Unit Cost
+                          </th>
+
+                          <th className="px-4 py-3 text-right font-semibold">
+                            Total
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {selectedOrder.lines.map((line) => {
+                          const product = productMap.get(line.productId);
+
+                          return (
+                            <tr
+                              key={line.id}
+                              className="border-b border-line last:border-0"
+                            >
+                              <td className="px-4 py-3">
+                                <div className="text-sm font-medium text-ink">
+                                  {product?.name ?? "Unknown product"}
+                                </div>
+
+                                <div className="mt-0.5 text-xs text-ink-muted">
+                                  {product?.sku ?? line.productId}
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3 text-right text-sm text-ink-secondary">
+                                {line.orderedQuantity.toLocaleString(
+                                  undefined,
+                                  {
+                                    maximumFractionDigits: 4,
+                                  },
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3 text-right text-sm text-ink-secondary">
+                                ${formatCurrency(line.unitCost)}
+                              </td>
+
+                              <td className="px-4 py-3 text-right text-sm font-medium text-ink">
+                                ${formatCurrency(line.lineTotal)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+
+                      <tfoot>
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="px-4 py-4 text-right text-sm font-semibold text-ink"
+                          >
+                            Grand Total
+                          </td>
+
+                          <td className="px-4 py-4 text-right text-sm font-bold text-ink">
+                            ${formatCurrency(selectedOrder.totalAmount)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-line pt-5">
+                  {selectedOrder.status === "DRAFT" && canCreate && (
                     <button
                       type="button"
-                      onClick={
-                        closeView
-                      }
+                      onClick={() => openActionDialog("submit", selectedOrder)}
                       className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
                     >
-                      Close
+                      Submit for Approval
                     </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                  )}
 
-        {dialogType &&
-          dialogOrder && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
-              <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
-                <h2 className="text-lg font-semibold text-ink">
-                  {dialogType ===
-                  "submit"
-                    ? "Submit Purchase Order?"
-                    : "Approve Purchase Order?"}
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-ink-muted">
-                  {dialogType ===
-                  "submit"
-                    ? `This will submit ${dialogOrder.orderNumber} for approval.`
-                    : `This will approve ${dialogOrder.orderNumber} and move it into the approved purchasing workflow.`}
-                </p>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={
-                      closeActionDialog
-                    }
-                    disabled={
-                      actionLoading
-                    }
-                    className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:cursor-not-allowed"
-                  >
-                    Cancel
-                  </button>
+                  {selectedOrder.status === "SUBMITTED" && canApprove && (
+                    <button
+                      type="button"
+                      onClick={() => openActionDialog("approve", selectedOrder)}
+                      className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                    >
+                      Approve Purchase Order
+                    </button>
+                  )}
 
                   <button
                     type="button"
-                    onClick={
-                      confirmAction
-                    }
-                    disabled={
-                      actionLoading
-                    }
-                    className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={closeView}
+                    className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover"
                   >
-                    {actionLoading
-                      ? "Processing..."
-                      : dialogType ===
-                          "submit"
-                        ? "Submit"
-                        : "Approve"}
+                    Close
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
+
+        {dialogType && dialogOrder && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+            <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+              <h2 className="text-lg font-semibold text-ink">
+                {dialogType === "submit"
+                  ? "Submit Purchase Order?"
+                  : "Approve Purchase Order?"}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                {dialogType === "submit"
+                  ? `This will submit ${dialogOrder.orderNumber} for approval.`
+                  : `This will approve ${dialogOrder.orderNumber} and move it into the approved purchasing workflow.`}
+              </p>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeActionDialog}
+                  disabled={actionLoading}
+                  className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-secondary hover:bg-surface-hover disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmAction}
+                  disabled={actionLoading}
+                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {actionLoading
+                    ? "Processing..."
+                    : dialogType === "submit"
+                      ? "Submit"
+                      : "Approve"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
 }
-
