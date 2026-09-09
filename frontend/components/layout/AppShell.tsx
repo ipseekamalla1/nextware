@@ -137,7 +137,7 @@ const navigation: {
         href: "/sales",
         permission:
           "SALES_ORDER_CREATE",
-        soon: true,
+      
       },
       {
         label: "Fulfillment",
