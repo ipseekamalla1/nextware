@@ -145,7 +145,7 @@ const navigation: {
         href: "/fulfillment",
         permission:
           "SALES_ORDER_CREATE",
-        soon: true,
+       
       },
     ],
   },
