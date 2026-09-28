@@ -857,7 +857,7 @@ export default function FulfillmentPage() {
                 <button
                   type="button"
                   onClick={() => setShowPackageForm((value) => !value)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#283618] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#3b4d22]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#DDA15E] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#3b4d22]"
                 >
                   <PlusIcon />
                   New Package
@@ -868,7 +868,7 @@ export default function FulfillmentPage() {
                 <button
                   type="button"
                   onClick={() => setShowShipmentForm((value) => !value)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#283618] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#3b4d22]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#DDA15E] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#3b4d22]"
                 >
                   <PlusIcon />
                   New Shipment
@@ -977,7 +977,7 @@ export default function FulfillmentPage() {
                   onClick={() => setTab(key)}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     tab === key
-                      ? "bg-primary-900 text-white"
+                      ? "bg-[#DDA15E] text-white"
                       : "text-gray-600 hover:bg-[#fefae0]"
                   }`}
                 >
