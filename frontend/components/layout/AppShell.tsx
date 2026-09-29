@@ -156,7 +156,7 @@ const navigation: {
         label: "Reports",
         icon: ChartIcon,
         href: "/reports",
-        soon: true,
+       
       },
     ],
   },
