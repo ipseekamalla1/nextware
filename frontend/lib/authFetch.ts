@@ -32,12 +32,11 @@ export async function authFetch(
 ): Promise<Response> {
   const token = getAccessToken();
 
-  const headers = new Headers(
-    options.headers
-  );
+  const headers = new Headers(options.headers);
 
   if (
     options.body &&
+    !(options.body instanceof FormData) &&
     !headers.has("Content-Type")
   ) {
     headers.set(
