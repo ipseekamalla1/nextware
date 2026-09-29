@@ -171,6 +171,12 @@ const navigation: {
       permission: "DOCUMENT_VIEW",
     },
     {
+  label: "Audit",
+  icon:FileTextIcon,
+  href: "/audit",
+  permission: "AUDIT_VIEW",
+},
+    {
       label: "Settings",
       icon: SettingsIcon,
       href: "/settings",
