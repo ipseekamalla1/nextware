@@ -40,7 +40,6 @@ CREATE INDEX idx_document_company_created
 CREATE INDEX idx_document_company_type
     ON document(company_id, document_type);
 
-
 INSERT INTO permission (
     code,
     description

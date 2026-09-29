@@ -24,6 +24,7 @@ import {
   TruckIcon,
   UsersIcon,
   WarehouseIcon,
+  FileTextIcon,
 } from "@/components/ui/nav-icons";
 import {
   useAuth,
@@ -161,16 +162,22 @@ const navigation: {
     ],
   },
   {
-    section: "System",
-    items: [
-      {
-        label: "Settings",
-        icon: SettingsIcon,
-        href: "/settings",
-        soon: true,
-      },
-    ],
-  },
+  section: "System",
+  items: [
+    {
+      label: "Documents",
+      icon: FileTextIcon,
+      href: "/documents",
+      permission: "DOCUMENT_VIEW",
+    },
+    {
+      label: "Settings",
+      icon: SettingsIcon,
+      href: "/settings",
+      soon: true,
+    },
+  ],
+},
 ];
 
 const pageTitles: {
