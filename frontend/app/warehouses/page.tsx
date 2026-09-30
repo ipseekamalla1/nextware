@@ -12,9 +12,12 @@ import {
 import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   AlertIcon,
   CloseIcon,
+  DownloadIcon,
   EditIcon,
   EyeIcon,
   PlusIcon,
@@ -23,6 +26,8 @@ import {
 } from "@/components/ui/icons";
 
 type DialogType = "activate" | "deactivate" | null;
+
+const PAGE_SIZE = 10;
 
 export default function WarehousesPage() {
   const router = useRouter();
@@ -127,6 +132,34 @@ export default function WarehousesPage() {
       return matchesSearch && matchesStatus;
     });
   }, [warehouses, search, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ search, statusFilter });
+
+  if (appliedFilters.search !== search || appliedFilters.statusFilter !== statusFilter) {
+    setAppliedFilters({ search, statusFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredWarehouses.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedWarehouses = useMemo(
+    () => filteredWarehouses.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredWarehouses, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("warehouses", filteredWarehouses, [
+      { label: "Code", value: (row) => row.code },
+      { label: "Name", value: (row) => row.name },
+      { label: "Address", value: (row) => row.addressLine1 ?? "" },
+      { label: "City", value: (row) => row.city ?? "" },
+      { label: "State", value: (row) => row.state ?? "" },
+      { label: "Country", value: (row) => row.country ?? "" },
+      { label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+    ]);
+  }
 
   function openStatusDialog(
     warehouse: Warehouse
@@ -276,18 +309,30 @@ export default function WarehousesPage() {
               </p>
             </div>
 
-            {canCreate && (
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  router.push("/warehouses/new")
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                onClick={handleExport}
+                disabled={filteredWarehouses.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <PlusIcon />
-                New Warehouse
+                <DownloadIcon />
+                Export
               </button>
-            )}
+
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/warehouses/new")
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                >
+                  <PlusIcon />
+                  New Warehouse
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -432,7 +477,7 @@ export default function WarehousesPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredWarehouses.map(
+                    {paginatedWarehouses.map(
                       (warehouse) => (
                         <tr
                           key={warehouse.id}
@@ -528,6 +573,13 @@ export default function WarehousesPage() {
                   </tbody>
                 </table>
               </div>
+
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredWarehouses.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
 

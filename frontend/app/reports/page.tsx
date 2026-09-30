@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 import AppShell from "@/components/layout/AppShell";
+import { DownloadIcon } from "@/components/ui/icons";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   getCurrentCompanyId,
   hasPermission,
@@ -202,6 +204,22 @@ function EmptyState({
   return (
     <div className="px-6 py-12 text-center">
       <p className="text-sm text-ink-muted">{message}</p>
+    </div>
+  );
+}
+
+function ExportRow({ onExport, disabled }: { onExport: () => void; disabled: boolean }) {
+  return (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        onClick={onExport}
+        disabled={disabled}
+        className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <DownloadIcon />
+        Export
+      </button>
     </div>
   );
 }
@@ -655,7 +673,7 @@ export default function ReportsPage() {
                       void loadReport()
                     }
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#DDA15E] px-4 py-2.5 text-sm font-semibold text-[#283618] shadow-sm transition hover:bg-[#BC6C25] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading
                       ? "Loading..."
@@ -810,6 +828,21 @@ function InventoryReport({
         />
       </div>
 
+      <ExportRow
+        disabled={report.rows.length === 0}
+        onExport={() =>
+          exportToCsv("inventory-report", report.rows, [
+            { label: "SKU", value: (row) => row.sku },
+            { label: "Product", value: (row) => row.productName },
+            { label: "Warehouse", value: (row) => row.warehouseName },
+            { label: "Location", value: (row) => row.locationCode },
+            { label: "Quantity", value: (row) => row.quantity },
+            { label: "Reserved", value: (row) => row.reservedQuantity },
+            { label: "Available", value: (row) => row.availableQuantity },
+          ])
+        }
+      />
+
       <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-left">
@@ -914,7 +947,26 @@ function TransactionsReport({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+    <div className="space-y-4">
+      <ExportRow
+        disabled={rows.length === 0}
+        onExport={() =>
+          exportToCsv("inventory-transactions-report", rows, [
+            { label: "Date", value: (row) => row.createdAt },
+            { label: "SKU", value: (row) => row.sku },
+            { label: "Product", value: (row) => row.productName },
+            { label: "Warehouse", value: (row) => row.warehouseName },
+            { label: "Location", value: (row) => row.locationCode },
+            { label: "Type", value: (row) => row.transactionType },
+            { label: "Quantity", value: (row) => row.quantity },
+            { label: "Reference Type", value: (row) => row.referenceType ?? "" },
+            { label: "Reference ID", value: (row) => row.referenceId ?? "" },
+            { label: "Notes", value: (row) => row.notes ?? "" },
+          ])
+        }
+      />
+
+      <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1250px] text-left">
           <thead>
@@ -1019,6 +1071,7 @@ function TransactionsReport({
         </table>
       </div>
     </section>
+    </div>
   );
 }
 
@@ -1052,6 +1105,19 @@ function PurchasingReport({
           )}`}
         />
       </div>
+
+      <ExportRow
+        disabled={report.rows.length === 0}
+        onExport={() =>
+          exportToCsv("purchasing-report", report.rows, [
+            { label: "Order Number", value: (row) => row.orderNumber },
+            { label: "Date", value: (row) => row.orderDate },
+            { label: "Supplier", value: (row) => row.supplierName },
+            { label: "Status", value: (row) => row.status },
+            { label: "Value", value: (row) => row.orderedValue },
+          ])
+        }
+      />
 
       <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
         <div className="overflow-x-auto">
@@ -1173,6 +1239,20 @@ function ReceivingReport({
           )}`}
         />
       </div>
+
+      <ExportRow
+        disabled={report.rows.length === 0}
+        onExport={() =>
+          exportToCsv("receiving-report", report.rows, [
+            { label: "Receipt Number", value: (row) => row.receiptNumber },
+            { label: "Date", value: (row) => row.receiptDate },
+            { label: "Warehouse", value: (row) => row.warehouseName },
+            { label: "Status", value: (row) => row.status },
+            { label: "Quantity", value: (row) => row.receivedQuantity },
+            { label: "Value", value: (row) => row.receivedValue },
+          ])
+        }
+      />
 
       <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
         <div className="overflow-x-auto">
@@ -1298,6 +1378,19 @@ function SalesReport({
         />
       </div>
 
+      <ExportRow
+        disabled={report.rows.length === 0}
+        onExport={() =>
+          exportToCsv("sales-report", report.rows, [
+            { label: "Order Number", value: (row) => row.orderNumber },
+            { label: "Date", value: (row) => row.orderDate },
+            { label: "Customer", value: (row) => row.customerName },
+            { label: "Status", value: (row) => row.status },
+            { label: "Value", value: (row) => row.orderValue },
+          ])
+        }
+      />
+
       <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[950px] text-left">
@@ -1395,7 +1488,19 @@ function SalesCustomersReport({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+    <div className="space-y-4">
+      <ExportRow
+        disabled={rows.length === 0}
+        onExport={() =>
+          exportToCsv("sales-by-customer-report", rows, [
+            { label: "Customer", value: (row) => row.customerName },
+            { label: "Orders", value: (row) => row.orderCount },
+            { label: "Sales Value", value: (row) => row.orderValue },
+          ])
+        }
+      />
+
+      <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[700px] text-left">
           <thead>
@@ -1450,6 +1555,7 @@ function SalesCustomersReport({
         </table>
       </div>
     </section>
+    </div>
   );
 }
 

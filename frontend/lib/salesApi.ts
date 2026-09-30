@@ -83,15 +83,13 @@ async function getErrorMessage(
   try {
     const errorBody = await response.json();
 
-    ```
-if (typeof errorBody?.message === "string") {
-  return errorBody.message;
-}
+    if (typeof errorBody?.message === "string") {
+      return errorBody.message;
+    }
 
-if (typeof errorBody?.error === "string") {
-  return errorBody.error;
-}
-```;
+    if (typeof errorBody?.error === "string") {
+      return errorBody.error;
+    }
   } catch {
     // Response may not contain JSON.
   }

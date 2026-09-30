@@ -11,21 +11,30 @@ import {
 } from "@/lib/api";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   AlertIcon,
   CloseIcon,
+  DownloadIcon,
   EditIcon,
   EyeIcon,
   PlusIcon,
   PowerIcon,
   SearchIcon,
 } from "@/components/ui/icons";
-import { getCurrentCompanyId } from "@/lib/auth";
+import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 
 type DialogType = "activate" | "deactivate" | null;
 
+const PAGE_SIZE = 10;
+
 export default function CustomersPage() {
   const router = useRouter();
+
+  const canCreate = hasPermission("CUSTOMER_CREATE");
+  const canUpdate = hasPermission("CUSTOMER_UPDATE");
+  const canDelete = hasPermission("CUSTOMER_DELETE");
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
@@ -124,6 +133,33 @@ export default function CustomersPage() {
       return matchesSearch && matchesStatus;
     });
   }, [customers, search, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ search, statusFilter });
+
+  if (appliedFilters.search !== search || appliedFilters.statusFilter !== statusFilter) {
+    setAppliedFilters({ search, statusFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedCustomers = useMemo(
+    () => filteredCustomers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredCustomers, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("customers", filteredCustomers, [
+      { label: "Customer Code", value: (row) => row.customerCode },
+      { label: "Name", value: (row) => row.name },
+      { label: "Email", value: (row) => row.email ?? "" },
+      { label: "Phone", value: (row) => row.phone ?? "" },
+      { label: "City", value: (row) => row.billingCity ?? "" },
+      { label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+    ]);
+  }
 
   function openStatusDialog(customer: Customer) {
     setDialogCustomer(customer);
@@ -242,16 +278,30 @@ export default function CustomersPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                router.push("/customers/new")
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              <PlusIcon />
-              New Customer
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={filteredCustomers.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <DownloadIcon />
+                Export
+              </button>
+
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/customers/new")
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                >
+                  <PlusIcon />
+                  New Customer
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -352,7 +402,8 @@ export default function CustomersPage() {
               </p>
 
               {!search &&
-                statusFilter === "All Statuses" && (
+                statusFilter === "All Statuses" &&
+                canCreate && (
                   <button
                     type="button"
                     onClick={() =>
@@ -403,7 +454,7 @@ export default function CustomersPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredCustomers.map(
+                    {paginatedCustomers.map(
                       (customer) => (
                         <tr
                           key={customer.id}
@@ -456,33 +507,39 @@ export default function CustomersPage() {
                                 <EyeIcon />
                               </IconButton>
 
-                              <IconButton
-                                label="Edit"
-                                onClick={() =>
-                                  router.push(
-                                    `/customers/view?id=${encodeURIComponent(
-                                      customer.id
-                                    )}&edit=true`
-                                  )
-                                }
-                              >
-                                <EditIcon />
-                              </IconButton>
+                              {canUpdate && (
+                                <IconButton
+                                  label="Edit"
+                                  onClick={() =>
+                                    router.push(
+                                      `/customers/view?id=${encodeURIComponent(
+                                        customer.id
+                                      )}&edit=true`
+                                    )
+                                  }
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              )}
 
-                              <IconButton
-                                label={
-                                  customer.active
-                                    ? "Deactivate"
-                                    : "Activate"
-                                }
-                                onClick={() =>
-                                  openStatusDialog(
-                                    customer
-                                  )
-                                }
-                              >
-                                <PowerIcon />
-                              </IconButton>
+                              {(customer.active
+                                ? canDelete
+                                : canUpdate) && (
+                                <IconButton
+                                  label={
+                                    customer.active
+                                      ? "Deactivate"
+                                      : "Activate"
+                                  }
+                                  onClick={() =>
+                                    openStatusDialog(
+                                      customer
+                                    )
+                                  }
+                                >
+                                  <PowerIcon />
+                                </IconButton>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -492,17 +549,12 @@ export default function CustomersPage() {
                 </table>
               </div>
 
-              <div className="border-t border-line px-5 py-3 text-xs text-ink-muted">
-                Showing{" "}
-                <span className="font-semibold text-ink-secondary">
-                  {filteredCustomers.length}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-ink-secondary">
-                  {customers.length}
-                </span>{" "}
-                customers
-              </div>
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredCustomers.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
 

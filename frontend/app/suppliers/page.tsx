@@ -16,9 +16,12 @@ import {
 } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   AlertIcon,
   CloseIcon,
+  DownloadIcon,
   EditIcon,
   EyeIcon,
   PlusIcon,
@@ -27,6 +30,8 @@ import {
 } from "@/components/ui/icons";
 
 type DialogType = "activate" | "deactivate" | null;
+
+const PAGE_SIZE = 10;
 
 export default function SuppliersPage() {
   const router = useRouter();
@@ -133,6 +138,34 @@ export default function SuppliersPage() {
       return matchesSearch && matchesStatus;
     });
   }, [suppliers, search, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ search, statusFilter });
+
+  if (appliedFilters.search !== search || appliedFilters.statusFilter !== statusFilter) {
+    setAppliedFilters({ search, statusFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredSuppliers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedSuppliers = useMemo(
+    () => filteredSuppliers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredSuppliers, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("suppliers", filteredSuppliers, [
+      { label: "Supplier Code", value: (row) => row.supplierCode },
+      { label: "Name", value: (row) => row.name },
+      { label: "Email", value: (row) => row.email ?? "" },
+      { label: "Phone", value: (row) => row.phone ?? "" },
+      { label: "City", value: (row) => row.city ?? "" },
+      { label: "State", value: (row) => row.state ?? "" },
+      { label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+    ]);
+  }
 
   function openStatusDialog(supplier: Supplier) {
     if (supplier.active && !canDelete) {
@@ -294,18 +327,30 @@ export default function SuppliersPage() {
               </p>
             </div>
 
-            {canCreate && (
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  router.push("/suppliers/new")
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                onClick={handleExport}
+                disabled={filteredSuppliers.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <PlusIcon />
-                New Supplier
+                <DownloadIcon />
+                Export
               </button>
-            )}
+
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/suppliers/new")
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                >
+                  <PlusIcon />
+                  New Supplier
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -463,7 +508,7 @@ export default function SuppliersPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredSuppliers.map(
+                    {paginatedSuppliers.map(
                       (supplier) => (
                         <tr
                           key={supplier.id}
@@ -563,17 +608,12 @@ export default function SuppliersPage() {
                 </table>
               </div>
 
-              <div className="border-t border-line px-5 py-3 text-xs text-ink-muted">
-                Showing{" "}
-                <span className="font-semibold text-ink-secondary">
-                  {filteredSuppliers.length}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-ink-secondary">
-                  {suppliers.length}
-                </span>{" "}
-                suppliers
-              </div>
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredSuppliers.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
 

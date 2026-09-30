@@ -15,6 +15,11 @@ import {
   AuditRecord,
   getAuditLogs,
 } from "@/lib/auditApi";
+import { DownloadIcon } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
+
+const PAGE_SIZE = 10;
 
 function formatDateTime(
   value: string,
@@ -125,7 +130,7 @@ function EmptyState({
 function LoadingState() {
   return (
     <div className="px-6 py-14 text-center">
-      <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-line border-t-[#DDA15E]" />
+      <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-line border-t-primary-600" />
 
       <p className="mt-3 text-sm text-ink-muted">
         Loading audit records...
@@ -384,6 +389,33 @@ export default function AuditPage() {
     );
   }, [records, search]);
 
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ search, records });
+
+  if (appliedFilters.search !== search || appliedFilters.records !== records) {
+    setAppliedFilters({ search, records });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedRecords = useMemo(
+    () => filteredRecords.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredRecords, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("audit-log", filteredRecords, [
+      { label: "Date", value: (row) => row.createdAt },
+      { label: "User", value: (row) => row.userId },
+      { label: "Action", value: (row) => row.action },
+      { label: "Entity Type", value: (row) => row.entityType },
+      { label: "Entity ID", value: (row) => row.entityId ?? "" },
+      { label: "Details", value: (row) => row.details ?? "" },
+    ]);
+  }
+
   const hasFilters =
     Boolean(
       action ||
@@ -441,14 +473,26 @@ export default function AuditPage() {
                 </p>
               </div>
 
-              {lastUpdated && (
-                <div className="text-xs text-ink-muted">
-                  Last updated{" "}
-                  {formatDateTime(
-                    lastUpdated,
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-4">
+                {lastUpdated && (
+                  <div className="text-xs text-ink-muted">
+                    Last updated{" "}
+                    {formatDateTime(
+                      lastUpdated,
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={filteredRecords.length === 0}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <DownloadIcon />
+                  Export
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -686,7 +730,7 @@ export default function AuditPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="inline-flex items-center gap-2 rounded-lg bg-[#DDA15E] px-4 py-2.5 text-sm font-semibold text-[#283618] shadow-sm transition hover:bg-[#BC6C25] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {loading
                         ? "Loading..."
@@ -797,7 +841,7 @@ export default function AuditPage() {
                     </thead>
 
                     <tbody>
-                      {filteredRecords.map(
+                      {paginatedRecords.map(
                         (record) => (
                           <tr
                             key={record.id}
@@ -871,6 +915,15 @@ export default function AuditPage() {
                     </tbody>
                   </table>
                 </div>
+              )}
+
+              {filteredRecords.length > 0 && (
+                <Pagination
+                  page={currentPage}
+                  pageSize={PAGE_SIZE}
+                  total={filteredRecords.length}
+                  onPageChange={setPage}
+                />
               )}
             </section>
           </div>

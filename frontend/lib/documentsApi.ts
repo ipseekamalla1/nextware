@@ -118,6 +118,51 @@ export async function downloadDocument(
   window.URL.revokeObjectURL(url);
 }
 
+export function isPreviewableDocument(contentType: string): boolean {
+  return contentType === "application/pdf" || contentType.startsWith("image/");
+}
+
+export async function viewDocument(
+  documentId: string,
+  fileName: string,
+  contentType: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/documents/${encodeURIComponent(documentId)}/download`,
+    {
+      method: "GET",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        `Failed to open document: ${response.status}`,
+      ),
+    );
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+
+  if (isPreviewableDocument(contentType)) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  window.URL.revokeObjectURL(url);
+}
+
 export async function deleteDocument(
   documentId: string,
 ): Promise<void> {

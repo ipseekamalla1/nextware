@@ -11,9 +11,14 @@ import AppShell from "@/components/layout/AppShell";
 import {
 CheckIcon,
 CloseIcon,
+DownloadIcon,
 PlusIcon,
 SearchIcon,
 } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
+
+const PAGE_SIZE = 10;
 import {
 getCurrentCompanyId,
 hasPermission,
@@ -326,6 +331,40 @@ statusFilter,
 customerFilter,
 ]);
 
+const [page, setPage] = useState(1);
+const [appliedFilters, setAppliedFilters] = useState({
+search,
+statusFilter,
+customerFilter,
+});
+
+if (
+appliedFilters.search !== search ||
+appliedFilters.statusFilter !== statusFilter ||
+appliedFilters.customerFilter !== customerFilter
+) {
+setAppliedFilters({ search, statusFilter, customerFilter });
+setPage(1);
+}
+
+const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+const currentPage = Math.min(page, totalPages);
+
+const paginatedOrders = useMemo(
+() => filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+[filteredOrders, currentPage],
+);
+
+function handleExport() {
+exportToCsv("sales-orders", filteredOrders, [
+{ label: "Order Number", value: (row) => row.orderNumber },
+{ label: "Customer", value: (row) => customerMap.get(row.customerId)?.name ?? "" },
+{ label: "Order Date", value: (row) => row.orderDate },
+{ label: "Status", value: (row) => row.status },
+{ label: "Total Amount", value: (row) => row.totalAmount },
+]);
+}
+
 const totalValue = useMemo(
 () =>
 filteredOrders.reduce(
@@ -525,16 +564,28 @@ Operations / Sales </div>
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          router.push("/sales/new")
-        }
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-      >
-        <PlusIcon />
-        New Sales Order
-      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={filteredOrders.length === 0}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <DownloadIcon />
+          Export
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            router.push("/sales/new")
+          }
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+        >
+          <PlusIcon />
+          New Sales Order
+        </button>
+      </div>
     </div>
 
     {error && (
@@ -699,7 +750,7 @@ Operations / Sales </div>
           </thead>
 
           <tbody className="divide-y divide-line">
-            {filteredOrders.map((order) => {
+            {paginatedOrders.map((order) => {
               const customer =
                 customerMap.get(
                   order.customerId,
@@ -844,6 +895,15 @@ Operations / Sales </div>
           </tbody>
         </table>
       </div>
+
+      {filteredOrders.length > 0 && (
+        <Pagination
+          page={currentPage}
+          pageSize={PAGE_SIZE}
+          total={filteredOrders.length}
+          onPageChange={setPage}
+        />
+      )}
     </div>
   </div>
 

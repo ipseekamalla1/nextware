@@ -9,10 +9,15 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import {
 AlertIcon,
+DownloadIcon,
 EyeIcon,
 PlusIcon,
 SearchIcon,
 } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
+
+const PAGE_SIZE = 10;
 import {
 getCurrentCompanyId,
 hasPermission,
@@ -292,6 +297,44 @@ statusFilter,
 warehouseFilter,
 ]);
 
+const [page, setPage] = useState(1);
+const [appliedFilters, setAppliedFilters] = useState({
+search,
+statusFilter,
+warehouseFilter,
+});
+
+if (
+appliedFilters.search !== search ||
+appliedFilters.statusFilter !== statusFilter ||
+appliedFilters.warehouseFilter !== warehouseFilter
+) {
+setAppliedFilters({ search, statusFilter, warehouseFilter });
+setPage(1);
+}
+
+const totalPages = Math.max(1, Math.ceil(filteredReceipts.length / PAGE_SIZE));
+const currentPage = Math.min(page, totalPages);
+
+const paginatedReceipts = useMemo(
+() => filteredReceipts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+[filteredReceipts, currentPage],
+);
+
+function handleExport() {
+exportToCsv("receipts", filteredReceipts, [
+{ label: "Receipt Number", value: (row) => row.receiptNumber },
+{
+label: "Purchase Order",
+value: (row) => purchaseOrderMap.get(row.purchaseOrderId)?.orderNumber ?? "",
+},
+{ label: "Warehouse", value: (row) => warehouseMap.get(row.warehouseId)?.name ?? "" },
+{ label: "Receipt Date", value: (row) => row.receiptDate },
+{ label: "Amount", value: (row) => row.totalAmount },
+{ label: "Status", value: (row) => formatStatus(row.status) },
+]);
+}
+
 if (!canView) {
 return ( <AppShell> <div className="p-6 lg:p-8"> <div className="rounded-xl border border-danger/30 bg-danger-soft px-6 py-10"> <p className="text-sm font-semibold text-danger">
 Access denied </p>
@@ -343,18 +386,30 @@ Operations / Purchasing / Receiving </div>
           </p>
         </div>
 
-        {canCreate && (
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            onClick={() =>
-              router.push("/receiving/new")
-            }
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+            onClick={handleExport}
+            disabled={filteredReceipts.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <PlusIcon />
-            New Receipt
+            <DownloadIcon />
+            Export
           </button>
-        )}
+
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/receiving/new")
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+            >
+              <PlusIcon />
+              New Receipt
+            </button>
+          )}
+        </div>
       </div>
     </div>
 
@@ -549,7 +604,7 @@ Operations / Purchasing / Receiving </div>
               </thead>
 
               <tbody className="divide-y divide-line">
-                {filteredReceipts.map(
+                {paginatedReceipts.map(
                   (receipt) => {
                     const purchaseOrder =
                       purchaseOrderMap.get(
@@ -655,6 +710,13 @@ Operations / Purchasing / Receiving </div>
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            page={currentPage}
+            pageSize={PAGE_SIZE}
+            total={filteredReceipts.length}
+            onPageChange={setPage}
+          />
         </div>
       )}
   </div>

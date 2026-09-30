@@ -6,11 +6,16 @@ import {
   AlertIcon,
   CheckIcon,
   CloseIcon,
+  DownloadIcon,
   PlusIcon,
   SearchIcon,
 } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import { getProducts, getSuppliers, Product, Supplier } from "@/lib/api";
+
+const PAGE_SIZE = 10;
 import {
   approvePurchaseOrder,
   createPurchaseOrder,
@@ -308,6 +313,40 @@ export default function PurchasingPage() {
       return matchesSearch && matchesStatus && matchesSupplier;
     });
   }, [purchaseOrders, supplierMap, search, statusFilter, supplierFilter]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({
+    search,
+    statusFilter,
+    supplierFilter,
+  });
+
+  if (
+    appliedFilters.search !== search ||
+    appliedFilters.statusFilter !== statusFilter ||
+    appliedFilters.supplierFilter !== supplierFilter
+  ) {
+    setAppliedFilters({ search, statusFilter, supplierFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedOrders = useMemo(
+    () => filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredOrders, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("purchase-orders", filteredOrders, [
+      { label: "Order Number", value: (row) => row.orderNumber },
+      { label: "Supplier", value: (row) => supplierMap.get(row.supplierId)?.name ?? "" },
+      { label: "Order Date", value: (row) => row.orderDate },
+      { label: "Status", value: (row) => row.status },
+      { label: "Total Amount", value: (row) => row.totalAmount },
+    ]);
+  }
 
   const totalValue = useMemo(
     () => filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0),
@@ -659,14 +698,26 @@ export default function PurchasingPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
-            >
-              <PlusIcon />
-              New Purchase Order
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={filteredOrders.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <DownloadIcon />
+                Export
+              </button>
+
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
+              >
+                <PlusIcon />
+                New Purchase Order
+              </button>
+            </div>
           </div>
         </div>
 
@@ -754,7 +805,9 @@ export default function PurchasingPage() {
           <div className="mb-5 rounded-xl border border-line bg-surface p-4">
             <div className="flex flex-col gap-3 lg:flex-row">
               <div className="relative flex-1">
-                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+                <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
+                  <SearchIcon />
+                </div>
 
                 <input
                   type="text"
@@ -860,7 +913,7 @@ export default function PurchasingPage() {
                   </thead>
 
                   <tbody>
-                    {filteredOrders.map((order) => {
+                    {paginatedOrders.map((order) => {
                       const supplier = supplierMap.get(order.supplierId);
 
                       return (
@@ -945,6 +998,15 @@ export default function PurchasingPage() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {filteredOrders.length > 0 && (
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredOrders.length}
+                onPageChange={setPage}
+              />
             )}
           </div>
         </div>

@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
 AlertIcon,
 CheckIcon,
 CloseIcon,
+DownloadIcon,
 EditIcon,
 EyeIcon,
 PlusIcon,
@@ -16,6 +19,8 @@ PowerIcon,
 SearchIcon,
 TrashIcon,
 } from "@/components/ui/icons";
+
+const PAGE_SIZE = 10;
 import {
 activateProduct,
 Category,
@@ -48,6 +53,7 @@ const [units, setUnits] = useState<UnitOfMeasure[]>([]);
 
 const [search, setSearch] = useState("");
 const [statusFilter, setStatusFilter] = useState("All Statuses");
+const [categoryFilter, setCategoryFilter] = useState("All Categories");
 
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
@@ -184,11 +190,58 @@ return products.filter((product) => {
     (statusFilter === "Active" && product.active) ||
     (statusFilter === "Inactive" && !product.active);
 
-  return matchesSearch && matchesStatus;
+  const matchesCategory =
+    categoryFilter === "All Categories" ||
+    product.categoryId === categoryFilter;
+
+  return matchesSearch && matchesStatus && matchesCategory;
 });
 
 
-}, [products, search, statusFilter]);
+}, [products, search, statusFilter, categoryFilter]);
+
+const [page, setPage] = useState(1);
+const [appliedFilters, setAppliedFilters] = useState({
+search,
+statusFilter,
+categoryFilter,
+});
+
+if (
+appliedFilters.search !== search ||
+appliedFilters.statusFilter !== statusFilter ||
+appliedFilters.categoryFilter !== categoryFilter
+) {
+setAppliedFilters({ search, statusFilter, categoryFilter });
+setPage(1);
+}
+
+const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+const currentPage = Math.min(page, totalPages);
+
+const paginatedProducts = useMemo(
+() => filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+[filteredProducts, currentPage],
+);
+
+function categoryName(categoryId: string | null): string {
+if (!categoryId) {
+return "";
+}
+return categories.find((category) => category.id === categoryId)?.name ?? "";
+}
+
+function handleExport() {
+exportToCsv("products", filteredProducts, [
+{ label: "SKU", value: (row) => row.sku },
+{ label: "Name", value: (row) => row.name },
+{ label: "Barcode", value: (row) => row.barcode ?? "" },
+{ label: "Category", value: (row) => categoryName(row.categoryId) },
+{ label: "Cost Price", value: (row) => row.costPrice ?? "" },
+{ label: "Selling Price", value: (row) => row.sellingPrice ?? "" },
+{ label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+]);
+}
 
 function updateForm(
 field: keyof ProductCreateRequest,
@@ -882,16 +935,28 @@ Master Data / Products </div>
         </p>
       </div>
 
-      {canCreate && (
+      <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
-          onClick={openCreateForm}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
+          onClick={handleExport}
+          disabled={filteredProducts.length === 0}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <PlusIcon />
-          New Product
+          <DownloadIcon />
+          Export
         </button>
-      )}
+
+        {canCreate && (
+          <button
+            type="button"
+            onClick={openCreateForm}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
+          >
+            <PlusIcon />
+            New Product
+          </button>
+        )}
+      </div>
     </div>
 
     {/* FILTERS */}
@@ -909,6 +974,19 @@ Master Data / Products </div>
           className="w-full rounded-lg border border-line py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-ink-muted focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
         />
       </div>
+
+      <select
+        value={categoryFilter}
+        onChange={(event) => setCategoryFilter(event.target.value)}
+        className="rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-primary-400"
+      >
+        <option>All Categories</option>
+        {categories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        ))}
+      </select>
 
       <select
         value={statusFilter}
@@ -1018,7 +1096,7 @@ Master Data / Products </div>
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => {
+                paginatedProducts.map((product) => {
                   const category = product.categoryId
                     ? categoryMap.get(product.categoryId)
                     : undefined;
@@ -1116,16 +1194,13 @@ Master Data / Products </div>
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="flex items-center justify-between border-t border-line px-5 py-4">
-          <p className="text-xs text-ink-muted">
-            Showing {filteredProducts.length} of {products.length} products
-          </p>
-
-          <p className="text-xs text-ink-muted">
-            {products.filter((product) => product.active).length} active
-          </p>
-        </div>
+      {!loading && !error && filteredProducts.length > 0 && (
+        <Pagination
+          page={currentPage}
+          pageSize={PAGE_SIZE}
+          total={filteredProducts.length}
+          onPageChange={setPage}
+        />
       )}
     </div>
   </div>

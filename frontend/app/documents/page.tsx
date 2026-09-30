@@ -10,13 +10,33 @@ import {
   useState,
 } from "react";
 import AppShell from "@/components/layout/AppShell";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHeader } from "@/components/ui/Card";
+import { IconButton } from "@/components/ui/IconButton";
+import { Badge } from "@/components/ui/StatusBadge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Toast } from "@/components/ui/Toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Pagination } from "@/components/ui/Pagination";
+import { useToast } from "@/components/ui/useToast";
+import {
+  DownloadIcon,
+  EyeIcon,
+  SearchIcon,
+  TrashIcon,
+  UploadIcon,
+} from "@/components/ui/icons";
 import {
   deleteDocument,
   DocumentRecord,
   downloadDocument,
   getDocuments,
   uploadDocument,
+  viewDocument,
 } from "@/lib/documentsApi";
+import { exportToCsv } from "@/lib/exportCsv";
 import { hasPermission } from "@/lib/auth";
 
 const DOCUMENT_TYPES = [
@@ -32,6 +52,8 @@ const DOCUMENT_TYPES = [
   "PRODUCT",
   "OTHER",
 ];
+
+const PAGE_SIZE = 10;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
@@ -63,67 +85,34 @@ function formatDocumentType(value: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function FileIcon({
-  contentType,
-}: {
-  contentType: string;
-}) {
+function FileIcon({ contentType }: { contentType: string }) {
   const isPdf = contentType === "application/pdf";
   const isImage = contentType.startsWith("image/");
   const isSpreadsheet =
-    contentType.includes("spreadsheet") ||
-    contentType.includes("excel");
+    contentType.includes("spreadsheet") || contentType.includes("excel");
 
   return (
     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-active text-ink-secondary">
       {isPdf ? (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <path d="M14 2v6h6" />
           <path d="M8 16h2" />
           <path d="M8 12h8" />
         </svg>
       ) : isImage ? (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <circle cx="8.5" cy="8.5" r="1.5" />
           <path d="m21 15-5-5L5 21" />
         </svg>
       ) : isSpreadsheet ? (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <rect x="4" y="3" width="16" height="18" rx="2" />
           <path d="M8 8h8M8 12h8M8 16h8M12 8v8" />
         </svg>
       ) : (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <path d="M14 2v6h6" />
         </svg>
@@ -135,32 +124,36 @@ function FileIcon({
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All Types");
+  const [page, setPage] = useState(1);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState("GENERAL");
   const [description, setDescription] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DocumentRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast, showToast, dismissToast } = useToast();
 
   const canCreate = hasPermission("DOCUMENT_CREATE");
   const canDelete = hasPermission("DOCUMENT_DELETE");
 
   async function loadDocuments() {
     setLoading(true);
-    setError(null);
+    setPageError(null);
 
     try {
       const result = await getDocuments();
       setDocuments(result);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to load documents.",
+      setPageError(
+        loadError instanceof Error ? loadError.message : "Unable to load documents.",
       );
     } finally {
       setLoading(false);
@@ -171,6 +164,9 @@ export default function DocumentsPage() {
     let cancelled = false;
 
     async function fetchDocuments() {
+      setLoading(true);
+      setPageError(null);
+
       try {
         const result = await getDocuments();
 
@@ -179,10 +175,8 @@ export default function DocumentsPage() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Unable to load documents.",
+          setPageError(
+            loadError instanceof Error ? loadError.message : "Unable to load documents.",
           );
         }
       } finally {
@@ -199,63 +193,69 @@ export default function DocumentsPage() {
     };
   }, []);
 
+  const [appliedFilters, setAppliedFilters] = useState({ search, typeFilter });
+
+  if (appliedFilters.search !== search || appliedFilters.typeFilter !== typeFilter) {
+    setAppliedFilters({ search, typeFilter });
+    setPage(1);
+  }
+
   const filteredDocuments = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return documents;
-    }
+    return documents.filter((document) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        [
+          document.fileName,
+          document.documentType,
+          document.description ?? "",
+          document.contentType,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
 
-    return documents.filter((document) =>
-      [
-        document.fileName,
-        document.documentType,
-        document.description ?? "",
-        document.contentType,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedSearch),
-    );
-  }, [documents, search]);
+      const matchesType =
+        typeFilter === "All Types" || document.documentType === typeFilter;
+
+      return matchesSearch && matchesType;
+    });
+  }, [documents, search, typeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedDocuments = useMemo(
+    () =>
+      filteredDocuments.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+      ),
+    [filteredDocuments, currentPage],
+  );
 
   const totalSize = useMemo(
-    () =>
-      documents.reduce(
-        (total, document) => total + document.fileSize,
-        0,
-      ),
+    () => documents.reduce((total, document) => total + document.fileSize, 0),
     [documents],
   );
 
-  function handleFileChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setSelectedFile(event.target.files?.[0] ?? null);
-    setError(null);
-    setSuccess(null);
   }
 
-  async function handleUpload(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!selectedFile) {
-      setError("Select a file before uploading.");
+      showToast("error", "Select a file before uploading.");
       return;
     }
 
     setUploading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
-      await uploadDocument(
-        selectedFile,
-        documentType,
-        description,
-      );
+      await uploadDocument(selectedFile, documentType, description);
 
       setSelectedFile(null);
       setDocumentType("GENERAL");
@@ -266,35 +266,41 @@ export default function DocumentsPage() {
       }
 
       await loadDocuments();
-
-      setSuccess("Document uploaded successfully.");
+      showToast("success", "Document uploaded successfully.");
     } catch (uploadError) {
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Unable to upload document.",
+      showToast(
+        "error",
+        uploadError instanceof Error ? uploadError.message : "Unable to upload document.",
       );
     } finally {
       setUploading(false);
     }
   }
 
-  async function handleDownload(
-    document: DocumentRecord,
-  ) {
+  async function handleView(document: DocumentRecord) {
     setActionId(document.id);
-    setError(null);
-    setSuccess(null);
 
     try {
-      await downloadDocument(
-        document.id,
-        document.fileName,
+      await viewDocument(document.id, document.fileName, document.contentType);
+    } catch (viewError) {
+      showToast(
+        "error",
+        viewError instanceof Error ? viewError.message : "Unable to open document.",
       );
+    } finally {
+      setActionId(null);
+    }
+  }
 
-      setSuccess("Document download started.");
+  async function handleDownload(document: DocumentRecord) {
+    setActionId(document.id);
+
+    try {
+      await downloadDocument(document.id, document.fileName);
+      showToast("success", "Document download started.");
     } catch (downloadError) {
-      setError(
+      showToast(
+        "error",
         downloadError instanceof Error
           ? downloadError.message
           : "Unable to download document.",
@@ -304,40 +310,38 @@ export default function DocumentsPage() {
     }
   }
 
-  async function handleDelete(
-    document: DocumentRecord,
-  ) {
-    const confirmed = window.confirm(
-      `Delete "${document.fileName}"? This permanently removes the stored document.`,
-    );
-
-    if (!confirmed) {
+  async function confirmDelete() {
+    if (!deleteTarget) {
       return;
     }
 
-    setActionId(document.id);
-    setError(null);
-    setSuccess(null);
+    setDeleting(true);
 
     try {
-      await deleteDocument(document.id);
+      await deleteDocument(deleteTarget.id);
 
-      setDocuments((current) =>
-        current.filter(
-          (item) => item.id !== document.id,
-        ),
-      );
-
-      setSuccess("Document deleted successfully.");
+      setDocuments((current) => current.filter((item) => item.id !== deleteTarget.id));
+      showToast("success", "Document deleted successfully.");
+      setDeleteTarget(null);
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Unable to delete document.",
+      showToast(
+        "error",
+        deleteError instanceof Error ? deleteError.message : "Unable to delete document.",
       );
     } finally {
-      setActionId(null);
+      setDeleting(false);
     }
+  }
+
+  function handleExport() {
+    exportToCsv("documents", filteredDocuments, [
+      { label: "File Name", value: (row) => row.fileName },
+      { label: "Type", value: (row) => formatDocumentType(row.documentType) },
+      { label: "Description", value: (row) => row.description ?? "" },
+      { label: "Size", value: (row) => formatFileSize(row.fileSize) },
+      { label: "Uploaded By", value: (row) => row.uploadedBy },
+      { label: "Uploaded At", value: (row) => formatDate(row.createdAt) },
+    ]);
   }
 
   return (
@@ -345,10 +349,7 @@ export default function DocumentsPage() {
       <div className="space-y-6 p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-ink">
-              Documents
-            </h1>
-
+            <h1 className="text-2xl font-bold tracking-tight text-ink">Documents</h1>
             <p className="mt-1 text-sm text-ink-muted">
               Centralized business documents for your company.
             </p>
@@ -359,17 +360,13 @@ export default function DocumentsPage() {
               <div className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                 Documents
               </div>
-
-              <div className="mt-1 text-xl font-bold text-ink">
-                {documents.length}
-              </div>
+              <div className="mt-1 text-xl font-bold text-ink">{documents.length}</div>
             </div>
 
             <div className="rounded-xl border border-line bg-surface px-4 py-3">
               <div className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                 Stored
               </div>
-
               <div className="mt-1 text-xl font-bold text-ink">
                 {formatFileSize(totalSize)}
               </div>
@@ -379,51 +376,23 @@ export default function DocumentsPage() {
               <div className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                 Access
               </div>
-
               <div className="mt-1 text-sm font-semibold text-ink">
-                {canCreate
-                  ? "Upload enabled"
-                  : "View only"}
+                {canCreate ? "Upload enabled" : "View only"}
               </div>
             </div>
           </div>
         </div>
 
-        {error && (
-          <div
-            role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div
-            role="status"
-            className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
-          >
-            {success}
-          </div>
-        )}
-
         {canCreate && (
-          <section className="rounded-xl border border-line bg-surface shadow-sm">
+          <Card padded={false}>
             <div className="border-b border-line px-5 py-4">
-              <h2 className="text-sm font-semibold text-ink">
-                Add document
-              </h2>
-
-              <p className="mt-1 text-xs text-ink-muted">
-                Upload a business document to the company
-                document store.
-              </p>
+              <CardHeader
+                title="Add document"
+                description="Upload a business document to the company document store."
+              />
             </div>
 
-            <form
-              onSubmit={handleUpload}
-              className="grid gap-5 p-5 lg:grid-cols-[1.3fr_0.7fr]"
-            >
+            <form onSubmit={handleUpload} className="grid gap-5 p-5 lg:grid-cols-[1.3fr_0.7fr]">
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
                   File
@@ -438,8 +407,7 @@ export default function DocumentsPage() {
 
                 {selectedFile && (
                   <div className="mt-2 text-xs text-ink-muted">
-                    {selectedFile.name} ·{" "}
-                    {formatFileSize(selectedFile.size)}
+                    {selectedFile.name} · {formatFileSize(selectedFile.size)}
                   </div>
                 )}
               </div>
@@ -451,9 +419,7 @@ export default function DocumentsPage() {
 
                 <select
                   value={documentType}
-                  onChange={(event) =>
-                    setDocumentType(event.target.value)
-                  }
+                  onChange={(event) => setDocumentType(event.target.value)}
                   className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-600"
                 >
                   {DOCUMENT_TYPES.map((type) => (
@@ -471,9 +437,7 @@ export default function DocumentsPage() {
 
                 <textarea
                   value={description}
-                  onChange={(event) =>
-                    setDescription(event.target.value)
-                  }
+                  onChange={(event) => setDescription(event.target.value)}
                   maxLength={1000}
                   rows={3}
                   placeholder="Optional description or document context"
@@ -482,202 +446,217 @@ export default function DocumentsPage() {
               </div>
 
               <div className="lg:col-span-2">
-                <button
-                  type="submit"
-                  disabled={uploading || !selectedFile}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#DDA15E] px-4 py-2.5 text-sm font-semibold text-[#283618] shadow-sm transition hover:bg-[#BC6C25] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {uploading
-                    ? "Uploading..."
-                    : "Upload document"}
-                </button>
+                <Button type="submit" disabled={uploading || !selectedFile}>
+                  <UploadIcon />
+                  {uploading ? "Uploading..." : "Upload document"}
+                </Button>
               </div>
             </form>
-          </section>
+          </Card>
         )}
 
-        <section className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+        <Card padded={false}>
           <div className="flex flex-col gap-4 border-b border-line px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-ink">
-                Document library
-              </h2>
-
+              <h2 className="text-sm font-semibold text-ink">Document library</h2>
               <p className="mt-1 text-xs text-ink-muted">
-                {filteredDocuments.length} document
-                {filteredDocuments.length === 1
-                  ? ""
-                  : "s"}{" "}
+                {filteredDocuments.length} document{filteredDocuments.length === 1 ? "" : "s"}{" "}
                 shown
               </p>
             </div>
 
-            <div className="w-full lg:w-80">
-              <input
-                type="search"
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search documents..."
-                className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-600"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative w-full sm:w-64">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
+                  <SearchIcon />
+                </span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search documents..."
+                  className="w-full rounded-lg border border-line bg-canvas py-2.5 pl-9 pr-3 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-primary-600"
+                />
+              </div>
+
+              <select
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value)}
+                className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-600 sm:w-44"
+              >
+                <option>All Types</option>
+                {DOCUMENT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {formatDocumentType(type)}
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                variant="outline"
+                size="md"
+                onClick={handleExport}
+                disabled={filteredDocuments.length === 0}
+              >
+                <DownloadIcon />
+                Export
+              </Button>
             </div>
           </div>
 
           {loading ? (
-            <div className="px-5 py-12 text-center text-sm text-ink-muted">
-              Loading documents...
-            </div>
+            <TableSkeleton rows={6} columns={5} />
+          ) : pageError ? (
+            <ErrorState description={pageError} onRetry={loadDocuments} />
           ) : filteredDocuments.length === 0 ? (
-            <div className="px-5 py-14 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-surface-active text-ink-muted">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                >
+            <EmptyState
+              icon={
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <path d="M14 2v6h6" />
                 </svg>
-              </div>
-
-              <h3 className="mt-4 text-sm font-semibold text-ink">
-                {search
-                  ? "No matching documents"
-                  : "No documents yet"}
-              </h3>
-
-              <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
-                {search
+              }
+              title={search || typeFilter !== "All Types" ? "No matching documents" : "No documents yet"}
+              description={
+                search || typeFilter !== "All Types"
                   ? "Try a different filename, document type, or description."
                   : canCreate
                     ? "Upload your first business document using the form above."
-                    : "Documents uploaded to your company will appear here."}
-              </p>
-            </div>
+                    : "Documents uploaded to your company will appear here."
+              }
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-line bg-canvas text-left">
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Document
-                    </th>
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-line bg-canvas text-left">
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Document
+                      </th>
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Type
+                      </th>
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Size
+                      </th>
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Uploaded
+                      </th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
 
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Type
-                    </th>
+                  <tbody className="divide-y divide-line">
+                    {paginatedDocuments.map((document) => {
+                      const busy = actionId === document.id;
 
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Size
-                    </th>
-
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Uploaded
-                    </th>
-
-                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-line">
-                  {filteredDocuments.map((document) => {
-                    const busy =
-                      actionId === document.id;
-
-                    return (
-                      <tr
-                        key={document.id}
-                        className="transition hover:bg-surface-hover"
-                      >
-                        <td className="px-5 py-4">
-                          <div className="flex min-w-[260px] items-center gap-3">
-                            <FileIcon
-                              contentType={
-                                document.contentType
-                              }
-                            />
-
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold text-ink">
-                                {document.fileName}
-                              </div>
-
-                              <div className="mt-0.5 max-w-md truncate text-xs text-ink-muted">
-                                {document.description ||
-                                  document.contentType}
+                      return (
+                        <tr key={document.id} className="transition hover:bg-surface-hover">
+                          <td className="px-5 py-4">
+                            <div className="flex min-w-[260px] items-center gap-3">
+                              <FileIcon contentType={document.contentType} />
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-ink">
+                                  {document.fileName}
+                                </div>
+                                <div className="mt-0.5 max-w-md truncate text-xs text-ink-muted">
+                                  {document.description || document.contentType}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-sm text-ink-secondary">
-                          {formatDocumentType(
-                            document.documentType,
-                          )}
-                        </td>
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <Badge tone="info">{formatDocumentType(document.documentType)}</Badge>
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-sm text-ink-secondary">
-                          {formatFileSize(
-                            document.fileSize,
-                          )}
-                        </td>
+                          <td className="whitespace-nowrap px-5 py-4 text-sm text-ink-secondary">
+                            {formatFileSize(document.fileSize)}
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-sm text-ink-secondary">
-                          {formatDate(
-                            document.createdAt,
-                          )}
-                        </td>
-
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() =>
-                                handleDownload(
-                                  document,
-                                )
-                              }
-                              className="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink-secondary transition hover:bg-surface-hover hover:text-ink disabled:opacity-50"
-                            >
-                              {busy
-                                ? "Working..."
-                                : "Download"}
-                            </button>
-
-                            {canDelete && (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() =>
-                                  handleDelete(
-                                    document,
-                                  )
-                                }
-                                className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                              >
-                                Delete
-                              </button>
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <div className="text-sm text-ink-secondary">
+                              {formatDate(document.createdAt)}
+                            </div>
+                            {document.uploadedBy && (
+                              <div className="mt-0.5 text-xs text-ink-muted">
+                                by {document.uploadedBy}
+                              </div>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <div className="flex justify-end gap-2">
+                              <IconButton
+                                label="View"
+                                disabled={busy}
+                                onClick={() => handleView(document)}
+                              >
+                                <EyeIcon />
+                              </IconButton>
+
+                              <IconButton
+                                label="Download"
+                                disabled={busy}
+                                onClick={() => handleDownload(document)}
+                              >
+                                <DownloadIcon />
+                              </IconButton>
+
+                              {canDelete && (
+                                <IconButton
+                                  label="Delete"
+                                  danger
+                                  disabled={busy}
+                                  onClick={() => setDeleteTarget(document)}
+                                >
+                                  <TrashIcon />
+                                </IconButton>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredDocuments.length}
+                onPageChange={setPage}
+              />
+            </>
           )}
-        </section>
+        </Card>
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[80]">
+          <Toast type={toast.type} message={toast.message} onDismiss={dismissToast} />
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete document"
+        message={
+          <>
+            Delete <span className="font-semibold text-ink">{deleteTarget?.fileName}</span>?
+            This permanently removes the stored document.
+          </>
+        }
+        confirmLabel="Delete"
+        danger
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </AppShell>
   );
 }
-

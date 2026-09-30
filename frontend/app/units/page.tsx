@@ -10,15 +10,20 @@ import {
 } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   AlertIcon,
   CheckIcon,
   CloseIcon,
+  DownloadIcon,
   EditIcon,
   PlusIcon,
   PowerIcon,
   SearchIcon,
 } from "@/components/ui/icons";
+
+const PAGE_SIZE = 10;
 
 interface UnitOfMeasure {
   id: string;
@@ -219,6 +224,31 @@ export default function UnitsPage() {
       return matchesSearch && matchesStatus;
     });
   }, [units, search, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ search, statusFilter });
+
+  if (appliedFilters.search !== search || appliedFilters.statusFilter !== statusFilter) {
+    setAppliedFilters({ search, statusFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedUnits = useMemo(
+    () => filteredUnits.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredUnits, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("units-of-measure", filteredUnits, [
+      { label: "Code", value: (row) => row.code },
+      { label: "Name", value: (row) => row.name },
+      { label: "Description", value: (row) => row.description ?? "" },
+      { label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+    ]);
+  }
 
   function openCreateForm() {
     setEditingUnit(null);
@@ -554,16 +584,28 @@ export default function UnitsPage() {
               </p>
             </div>
 
-            {canCreate && (
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={openCreateForm}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                onClick={handleExport}
+                disabled={filteredUnits.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <PlusIcon />
-                New Unit
+                <DownloadIcon />
+                Export
               </button>
-            )}
+
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={openCreateForm}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                >
+                  <PlusIcon />
+                  New Unit
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -715,7 +757,7 @@ export default function UnitsPage() {
                   </thead>
 
                   <tbody>
-                    {filteredUnits.map(
+                    {paginatedUnits.map(
                       (unit) => (
                         <tr
                           key={unit.id}
@@ -788,6 +830,15 @@ export default function UnitsPage() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {!loading && filteredUnits.length > 0 && (
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredUnits.length}
+                onPageChange={setPage}
+              />
             )}
           </div>
         )}

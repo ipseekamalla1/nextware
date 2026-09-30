@@ -3,7 +3,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
-import { AlertIcon, SearchIcon } from "@/components/ui/icons";
+import { AlertIcon, DownloadIcon, SearchIcon } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
+
+const PAGE_SIZE = 10;
 import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import {
   getProducts,
@@ -659,6 +663,53 @@ export default function InventoryPage() {
     effectiveLocationFilter,
   ]);
 
+  const [balancesPage, setBalancesPage] = useState(1);
+  const [appliedBalanceFilters, setAppliedBalanceFilters] = useState({
+    search,
+    productFilter,
+    warehouseFilter,
+    effectiveLocationFilter,
+  });
+
+  if (
+    appliedBalanceFilters.search !== search ||
+    appliedBalanceFilters.productFilter !== productFilter ||
+    appliedBalanceFilters.warehouseFilter !== warehouseFilter ||
+    appliedBalanceFilters.effectiveLocationFilter !== effectiveLocationFilter
+  ) {
+    setAppliedBalanceFilters({
+      search,
+      productFilter,
+      warehouseFilter,
+      effectiveLocationFilter,
+    });
+    setBalancesPage(1);
+  }
+
+  const balancesTotalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const currentBalancesPage = Math.min(balancesPage, balancesTotalPages);
+
+  const paginatedRows = useMemo(
+    () =>
+      filteredRows.slice(
+        (currentBalancesPage - 1) * PAGE_SIZE,
+        currentBalancesPage * PAGE_SIZE,
+      ),
+    [filteredRows, currentBalancesPage],
+  );
+
+  function handleExportBalances() {
+    exportToCsv("inventory-balances", filteredRows, [
+      { label: "Product SKU", value: (row) => row.product?.sku ?? row.productId },
+      { label: "Product Name", value: (row) => row.product?.name ?? "" },
+      { label: "Warehouse", value: (row) => row.warehouse?.code ?? "" },
+      { label: "Location", value: (row) => row.location?.code ?? "" },
+      { label: "Quantity", value: (row) => row.quantity },
+      { label: "Reserved", value: (row) => row.reservedQuantity },
+      { label: "Available", value: (row) => row.availableQuantity },
+    ]);
+  }
+
   const totals = useMemo(() => {
     return filteredRows.reduce(
       (summary, row) => ({
@@ -759,6 +810,60 @@ export default function InventoryPage() {
     effectiveHistoryLocationFilter,
     historyTypeFilter,
   ]);
+
+  const [historyPage, setHistoryPage] = useState(1);
+  const [appliedHistoryFilters, setAppliedHistoryFilters] = useState({
+    historySearch,
+    historyProductFilter,
+    historyWarehouseFilter,
+    effectiveHistoryLocationFilter,
+    historyTypeFilter,
+  });
+
+  if (
+    appliedHistoryFilters.historySearch !== historySearch ||
+    appliedHistoryFilters.historyProductFilter !== historyProductFilter ||
+    appliedHistoryFilters.historyWarehouseFilter !== historyWarehouseFilter ||
+    appliedHistoryFilters.effectiveHistoryLocationFilter !==
+      effectiveHistoryLocationFilter ||
+    appliedHistoryFilters.historyTypeFilter !== historyTypeFilter
+  ) {
+    setAppliedHistoryFilters({
+      historySearch,
+      historyProductFilter,
+      historyWarehouseFilter,
+      effectiveHistoryLocationFilter,
+      historyTypeFilter,
+    });
+    setHistoryPage(1);
+  }
+
+  const historyTotalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE));
+  const currentHistoryPage = Math.min(historyPage, historyTotalPages);
+
+  const paginatedTransactions = useMemo(
+    () =>
+      filteredTransactions.slice(
+        (currentHistoryPage - 1) * PAGE_SIZE,
+        currentHistoryPage * PAGE_SIZE,
+      ),
+    [filteredTransactions, currentHistoryPage],
+  );
+
+  function handleExportTransactions() {
+    exportToCsv("inventory-transactions", filteredTransactions, [
+      {
+        label: "Product",
+        value: (row) => productMap.get(row.productId)?.sku ?? row.productId,
+      },
+      { label: "Type", value: (row) => formatTransactionType(row.transactionType) },
+      { label: "Quantity", value: (row) => row.quantity },
+      { label: "Reference Type", value: (row) => row.referenceType ?? "" },
+      { label: "Reference ID", value: (row) => row.referenceId ?? "" },
+      { label: "Notes", value: (row) => row.notes ?? "" },
+      { label: "Date", value: (row) => row.createdAt },
+    ]);
+  }
 
   if (!canView) {
     return (
@@ -890,19 +995,31 @@ export default function InventoryPage() {
                 </p>
               </div>
 
-              <div className="relative w-full lg:w-80">
-  <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
-    <SearchIcon />
-  </div>
+              <div className="flex w-full items-center gap-2 lg:w-auto">
+                <div className="relative w-full lg:w-80">
+                  <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
+                    <SearchIcon />
+                  </div>
 
-                <input
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
-                  placeholder="Search inventory..."
-                  className="w-full rounded-lg border border-line bg-surface px-9 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-primary-500"
-                />
+                  <input
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
+                    placeholder="Search inventory..."
+                    className="w-full rounded-lg border border-line bg-surface px-9 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-primary-500"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExportBalances}
+                  disabled={filteredRows.length === 0}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <DownloadIcon />
+                  Export
+                </button>
               </div>
             </div>
 
@@ -1035,7 +1152,7 @@ export default function InventoryPage() {
                 </thead>
 
                 <tbody className="divide-y divide-line">
-                  {filteredRows.map((row) => (
+                  {paginatedRows.map((row) => (
                     <tr
                       key={row.id}
                       className="transition hover:bg-surface-muted"
@@ -1095,6 +1212,15 @@ export default function InventoryPage() {
               </table>
             </div>
           )}
+
+          {!loading && filteredRows.length > 0 && (
+            <Pagination
+              page={currentBalancesPage}
+              pageSize={PAGE_SIZE}
+              total={filteredRows.length}
+              onPageChange={setBalancesPage}
+            />
+          )}
         </div>
 
         <div className="rounded-xl border border-line bg-surface shadow-sm">
@@ -1110,19 +1236,31 @@ export default function InventoryPage() {
                 </p>
               </div>
 
-              <div className="relative w-full lg:w-80">
-  <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
-    <SearchIcon />
-  </div>
+              <div className="flex w-full items-center gap-2 lg:w-auto">
+                <div className="relative w-full lg:w-80">
+                  <div className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
+                    <SearchIcon />
+                  </div>
 
-                <input
-                  value={historySearch}
-                  onChange={(event) =>
-                    setHistorySearch(event.target.value)
-                  }
-                  placeholder="Search transaction history..."
-                  className="w-full rounded-lg border border-line bg-surface px-9 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-primary-500"
-                />
+                  <input
+                    value={historySearch}
+                    onChange={(event) =>
+                      setHistorySearch(event.target.value)
+                    }
+                    placeholder="Search transaction history..."
+                    className="w-full rounded-lg border border-line bg-surface px-9 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-primary-500"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExportTransactions}
+                  disabled={filteredTransactions.length === 0}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <DownloadIcon />
+                  Export
+                </button>
               </div>
             </div>
 
@@ -1283,7 +1421,7 @@ export default function InventoryPage() {
                 </thead>
 
                 <tbody className="divide-y divide-line">
-                  {filteredTransactions.map(
+                  {paginatedTransactions.map(
                     (transaction) => {
                       const product =
                         productMap.get(
@@ -1396,6 +1534,15 @@ export default function InventoryPage() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {!historyLoading && filteredTransactions.length > 0 && (
+            <Pagination
+              page={currentHistoryPage}
+              pageSize={PAGE_SIZE}
+              total={filteredTransactions.length}
+              onPageChange={setHistoryPage}
+            />
           )}
         </div>
       </div>

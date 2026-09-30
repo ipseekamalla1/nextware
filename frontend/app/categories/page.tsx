@@ -15,9 +15,12 @@ import {
 } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   AlertIcon,
   CloseIcon,
+  DownloadIcon,
   EditIcon,
   EyeIcon,
   PlusIcon,
@@ -26,6 +29,8 @@ import {
 } from "@/components/ui/icons";
 
 type DialogType = "activate" | "deactivate" | null;
+
+const PAGE_SIZE = 10;
 
 export default function CategoriesPage() {
   const router = useRouter();
@@ -127,6 +132,30 @@ export default function CategoriesPage() {
       return matchesSearch && matchesStatus;
     });
   }, [categories, search, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ search, statusFilter });
+
+  if (appliedFilters.search !== search || appliedFilters.statusFilter !== statusFilter) {
+    setAppliedFilters({ search, statusFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedCategories = useMemo(
+    () => filteredCategories.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredCategories, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("categories", filteredCategories, [
+      { label: "Name", value: (row) => row.name },
+      { label: "Description", value: (row) => row.description ?? "" },
+      { label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+    ]);
+  }
 
   function openStatusDialog(category: Category) {
     if (category.active && !canDelete) {
@@ -306,18 +335,30 @@ export default function CategoriesPage() {
               </p>
             </div>
 
-            {canCreate && (
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  router.push("/categories/new")
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                onClick={handleExport}
+                disabled={filteredCategories.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <PlusIcon />
-                New Category
+                <DownloadIcon />
+                Export
               </button>
-            )}
+
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/categories/new")
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                >
+                  <PlusIcon />
+                  New Category
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -459,7 +500,7 @@ export default function CategoriesPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredCategories.map(
+                    {paginatedCategories.map(
                       (category) => (
                         <tr
                           key={category.id}
@@ -540,17 +581,12 @@ export default function CategoriesPage() {
                 </table>
               </div>
 
-              <div className="border-t border-line px-5 py-3 text-xs text-ink-muted">
-                Showing{" "}
-                <span className="font-semibold text-ink-secondary">
-                  {filteredCategories.length}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-ink-secondary">
-                  {categories.length}
-                </span>{" "}
-                categories
-              </div>
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredCategories.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
 

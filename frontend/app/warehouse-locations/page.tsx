@@ -12,13 +12,18 @@ import {
 import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { IconButton } from "@/components/ui/IconButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
+  DownloadIcon,
   EditIcon,
   EyeIcon,
   PlusIcon,
   PowerIcon,
   SearchIcon,
 } from "@/components/ui/icons";
+
+const PAGE_SIZE = 10;
 
 const LOCATION_TYPES = [
   "RECEIVING",
@@ -182,6 +187,39 @@ export default function WarehouseLocationsPage() {
     typeFilter,
     statusFilter,
   ]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({
+    search,
+    typeFilter,
+    statusFilter,
+  });
+
+  if (
+    appliedFilters.search !== search ||
+    appliedFilters.typeFilter !== typeFilter ||
+    appliedFilters.statusFilter !== statusFilter
+  ) {
+    setAppliedFilters({ search, typeFilter, statusFilter });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredLocations.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedLocations = useMemo(
+    () => filteredLocations.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredLocations, currentPage],
+  );
+
+  function handleExport() {
+    exportToCsv("warehouse-locations", filteredLocations, [
+      { label: "Code", value: (row) => row.code },
+      { label: "Name", value: (row) => row.name ?? "" },
+      { label: "Type", value: (row) => row.locationType },
+      { label: "Status", value: (row) => (row.active ? "Active" : "Inactive") },
+    ]);
+  }
 
   function openStatusDialog(
     location: WarehouseLocation
@@ -401,17 +439,29 @@ export default function WarehouseLocationsPage() {
               </p>
             </div>
 
-            {canCreate && (
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={openNewLocation}
-                disabled={!warehouseId}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleExport}
+                disabled={filteredLocations.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <PlusIcon />
-                New Location
+                <DownloadIcon />
+                Export
               </button>
-            )}
+
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={openNewLocation}
+                  disabled={!warehouseId}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <PlusIcon />
+                  New Location
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -608,7 +658,7 @@ export default function WarehouseLocationsPage() {
                   </thead>
 
                   <tbody className="divide-y divide-line">
-                    {filteredLocations.map(
+                    {paginatedLocations.map(
                       (location) => (
                         <tr
                           key={location.id}
@@ -696,6 +746,13 @@ export default function WarehouseLocationsPage() {
                   </tbody>
                 </table>
               </div>
+
+              <Pagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                total={filteredLocations.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
 

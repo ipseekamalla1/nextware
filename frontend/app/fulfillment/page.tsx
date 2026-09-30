@@ -7,11 +7,16 @@ import {
   AlertIcon,
   CheckIcon,
   CloseIcon,
+  DownloadIcon,
   PlusIcon,
   SearchIcon,
 } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/Pagination";
+import { exportToCsv } from "@/lib/exportCsv";
 
 import { getCurrentCompanyId, hasPermission } from "@/lib/auth";
+
+const PAGE_SIZE = 10;
 
 import { getSalesOrders, type SalesOrder } from "@/lib/salesApi";
 
@@ -325,6 +330,63 @@ export default function FulfillmentPage() {
         .some((value) => String(value).toLowerCase().includes(query)),
     );
   }, [shipments, search]);
+
+  const activeVisibleList = useMemo(() => {
+    if (tab === "PICKING") return visiblePickLists;
+    if (tab === "PACKING") return visiblePackages;
+    return visibleShipments;
+  }, [tab, visiblePickLists, visiblePackages, visibleShipments]);
+
+  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({ tab, search });
+
+  if (appliedFilters.tab !== tab || appliedFilters.search !== search) {
+    setAppliedFilters({ tab, search });
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(activeVisibleList.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedPickLists = useMemo(
+    () => visiblePickLists.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [visiblePickLists, currentPage],
+  );
+
+  const paginatedPackages = useMemo(
+    () => visiblePackages.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [visiblePackages, currentPage],
+  );
+
+  const paginatedShipments = useMemo(
+    () => visibleShipments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [visibleShipments, currentPage],
+  );
+
+  function handleExport() {
+    if (tab === "PICKING") {
+      exportToCsv("pick-lists", visiblePickLists, [
+        { label: "Pick List", value: (row) => row.number ?? "" },
+        { label: "Sales Order", value: (row) => row.salesOrderId ?? "" },
+        { label: "Warehouse", value: (row) => row.warehouseId ?? "" },
+        { label: "Status", value: (row) => row.status ?? "" },
+      ]);
+    } else if (tab === "PACKING") {
+      exportToCsv("packages", visiblePackages, [
+        { label: "Package", value: (row) => row.number ?? "" },
+        { label: "Sales Order", value: (row) => row.salesOrderId ?? "" },
+        { label: "Status", value: (row) => row.status ?? "" },
+      ]);
+    } else {
+      exportToCsv("shipments", visibleShipments, [
+        { label: "Shipment", value: (row) => row.number ?? "" },
+        { label: "Sales Order", value: (row) => row.salesOrderId ?? "" },
+        { label: "Carrier", value: (row) => row.carrierName ?? "" },
+        { label: "Tracking Number", value: (row) => row.trackingNumber ?? "" },
+        { label: "Status", value: (row) => row.status ?? "" },
+      ]);
+    }
+  }
 
   const selectedPackageSalesOrder = useMemo(
     () =>
@@ -986,17 +1048,29 @@ export default function FulfillmentPage() {
               ))}
             </div>
 
-            <div className="relative w-full md:max-w-sm">
-              <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <SearchIcon />
+            <div className="flex w-full items-center gap-2 md:w-auto">
+              <div className="relative w-full md:max-w-sm">
+                <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <SearchIcon />
+                </div>
+
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={`Search ${tab.toLowerCase()}...`}
+                  className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[#606c38] focus:ring-2 focus:ring-[#606c38]/10"
+                />
               </div>
 
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={`Search ${tab.toLowerCase()}...`}
-                className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[#606c38] focus:ring-2 focus:ring-[#606c38]/10"
-              />
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={activeVisibleList.length === 0}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink-secondary transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <DownloadIcon />
+                Export
+              </button>
             </div>
           </div>
 
@@ -1133,7 +1207,7 @@ export default function FulfillmentPage() {
                       </thead>
 
                       <tbody className="divide-y divide-gray-100">
-                        {visiblePickLists.map((pickList) => {
+                        {paginatedPickLists.map((pickList) => {
                           const lines = pickList.lines ?? [];
 
                           const allPicked =
@@ -1258,6 +1332,15 @@ export default function FulfillmentPage() {
                       </tbody>
                     </table>
                   </div>
+                )}
+
+                {visiblePickLists.length > 0 && (
+                  <Pagination
+                    page={currentPage}
+                    pageSize={PAGE_SIZE}
+                    total={visiblePickLists.length}
+                    onPageChange={setPage}
+                  />
                 )}
               </div>
             </>
@@ -1489,7 +1572,7 @@ export default function FulfillmentPage() {
                       </thead>
 
                       <tbody className="divide-y divide-gray-100">
-                        {visiblePackages.map((pkg) => (
+                        {paginatedPackages.map((pkg) => (
                           <tr key={pkg.id} className="hover:bg-[#fefae0]/50">
                             <td className="px-5 py-4 font-semibold text-[#283618]">
                               {pkg.number ?? "—"}
@@ -1538,6 +1621,15 @@ export default function FulfillmentPage() {
                       </tbody>
                     </table>
                   </div>
+                )}
+
+                {visiblePackages.length > 0 && (
+                  <Pagination
+                    page={currentPage}
+                    pageSize={PAGE_SIZE}
+                    total={visiblePackages.length}
+                    onPageChange={setPage}
+                  />
                 )}
               </div>
             </>
@@ -1765,7 +1857,7 @@ export default function FulfillmentPage() {
                       </thead>
 
                       <tbody className="divide-y divide-gray-100">
-                        {visibleShipments.map((shipment) => (
+                        {paginatedShipments.map((shipment) => (
                           <tr
                             key={shipment.id}
                             className="hover:bg-[#fefae0]/50"
@@ -1880,6 +1972,15 @@ export default function FulfillmentPage() {
                       </tbody>
                     </table>
                   </div>
+                )}
+
+                {visibleShipments.length > 0 && (
+                  <Pagination
+                    page={currentPage}
+                    pageSize={PAGE_SIZE}
+                    total={visibleShipments.length}
+                    onPageChange={setPage}
+                  />
                 )}
               </div>
             </>

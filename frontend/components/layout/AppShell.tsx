@@ -127,18 +127,17 @@ const navigation: {
           "PURCHASE_ORDER_CREATE",
       },
       {
-  label: "Receiving",
-  icon: PackageCheckIcon,
-  href: "/receiving",
-  permission: "INVENTORY_VIEW",
-},
+        label: "Receiving",
+        icon: PackageCheckIcon,
+        href: "/receiving",
+        permission: "INVENTORY_VIEW",
+      },
       {
         label: "Sales",
         icon: CartUpIcon,
         href: "/sales",
         permission:
           "SALES_ORDER_CREATE",
-      
       },
       {
         label: "Fulfillment",
@@ -146,7 +145,6 @@ const navigation: {
         href: "/fulfillment",
         permission:
           "SALES_ORDER_CREATE",
-       
       },
     ],
   },
@@ -157,33 +155,32 @@ const navigation: {
         label: "Reports",
         icon: ChartIcon,
         href: "/reports",
-       
       },
     ],
   },
   {
-  section: "System",
-  items: [
-    {
-      label: "Documents",
-      icon: FileTextIcon,
-      href: "/documents",
-      permission: "DOCUMENT_VIEW",
-    },
-    {
-  label: "Audit",
-  icon:FileTextIcon,
-  href: "/audit",
-  permission: "AUDIT_VIEW",
-},
-    {
-      label: "Settings",
-      icon: SettingsIcon,
-      href: "/settings",
-      soon: true,
-    },
-  ],
-},
+    section: "System",
+    items: [
+      {
+        label: "Documents",
+        icon: FileTextIcon,
+        href: "/documents",
+        permission: "DOCUMENT_VIEW",
+      },
+      {
+        label: "Audit",
+        icon: FileTextIcon,
+        href: "/audit",
+        permission: "AUDIT_VIEW",
+      },
+      {
+        label: "Settings",
+        icon: SettingsIcon,
+        href: "/settings",
+        permission: "COMPANY_VIEW",
+      },
+    ],
+  },
 ];
 
 const pageTitles: {
@@ -272,6 +269,13 @@ const pageTitles: {
   },
   {
     match: (p) =>
+      p.startsWith("/receiving"),
+    title: "Receiving",
+    description:
+      "Purchase receiving",
+  },
+  {
+    match: (p) =>
       p.startsWith("/sales"),
     title: "Sales",
     description:
@@ -290,6 +294,27 @@ const pageTitles: {
     title: "Reports",
     description:
       "Nextware ERP & WMS",
+  },
+  {
+    match: (p) =>
+      p.startsWith("/documents"),
+    title: "Documents",
+    description:
+      "Document management",
+  },
+  {
+    match: (p) =>
+      p.startsWith("/audit"),
+    title: "Audit",
+    description:
+      "System audit history",
+  },
+  {
+    match: (p) =>
+      p.startsWith("/settings"),
+    title: "Settings",
+    description:
+      "Company application settings",
   },
   {
     match: (p) =>
@@ -528,18 +553,13 @@ export default function AppShell({
                                 ? "bg-primary-600 text-white shadow-sm"
                                 : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
                             }`}
-                            title={
-                              sidebarCollapsed
-                                ? item.label
-                                : undefined
-                            }
                           >
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                               <Icon />
                             </span>
 
                             {!sidebarCollapsed && (
-                              <span>
+                              <span className="flex-1 text-left">
                                 {
                                   item.label
                                 }
@@ -557,100 +577,95 @@ export default function AppShell({
         </nav>
 
         <div className="border-t border-line p-3">
-          <div
-            className={`flex items-center ${
-              sidebarCollapsed
-                ? "justify-center"
-                : "gap-3"
-            } rounded-lg px-2 py-2`}
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-active text-xs font-semibold text-ink-secondary">
-              {initials}
-            </div>
-
-            {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-ink">
-                  {displayName}
-                </div>
-
-                <div className="truncate text-xs text-ink-muted">
-                  {session?.roles?.join(
-                    ", "
-                  ) || "User"}
-                </div>
+          {!sidebarCollapsed && (
+            <div className="mb-3 rounded-lg bg-surface-hover px-3 py-2.5">
+              <div className="truncate text-sm font-semibold text-ink">
+                {displayName}
               </div>
-            )}
+
+              <div className="mt-0.5 truncate text-xs text-ink-muted">
+                {session?.username ??
+                  "Authenticated user"}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-danger-soft hover:text-danger"
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path d="M10 17l5-5-5-5" />
+                <path d="M15 12H3" />
+                <path d="M21 19V5a2 2 0 0 0-2-2h-6" />
+              </svg>
+            </span>
 
             {!sidebarCollapsed && (
-              <button
-                type="button"
-                onClick={
-                  handleLogout
-                }
-                title="Sign out"
-                className="rounded-lg px-2 py-1.5 text-xs font-semibold text-ink-muted transition hover:bg-surface-hover hover:text-danger"
-              >
-                Exit
-              </button>
+              <span>Sign Out</span>
             )}
-          </div>
-
-          {sidebarCollapsed && (
-            <button
-              type="button"
-              onClick={
-                handleLogout
-              }
-              className="mt-2 w-full rounded-lg px-2 py-2 text-xs font-semibold text-ink-muted transition hover:bg-surface-hover hover:text-danger"
-              title="Sign out"
-            >
-              Exit
-            </button>
-          )}
+          </button>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-surface px-6">
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={() =>
                 setMobileOpen(
-                  (value) => !value
+                  !mobileOpen
                 )
               }
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-hover hover:text-ink md:hidden"
-              aria-label="Toggle navigation"
+              className="rounded-lg p-2 text-ink-secondary hover:bg-surface-hover hover:text-ink md:hidden"
+              aria-label="Open navigation"
             >
-              <MenuCollapseIcon />
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
             </button>
 
             <button
               type="button"
               onClick={() =>
                 setSidebarCollapsed(
-                  (value) => !value
+                  !sidebarCollapsed
                 )
               }
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-hover hover:text-ink md:flex"
-              aria-label="Toggle sidebar"
+              className="hidden rounded-lg p-2 text-ink-secondary hover:bg-surface-hover hover:text-ink md:block"
+              aria-label={
+                sidebarCollapsed
+                  ? "Expand navigation"
+                  : "Collapse navigation"
+              }
             >
               <MenuCollapseIcon />
             </button>
 
-            <div>
-              <div className="text-sm font-semibold text-ink">
-                {
-                  pageMeta.title
-                }
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-ink">
+                {pageMeta.title}
               </div>
 
-              <div className="text-xs text-ink-muted">
-                {
-                  pageMeta.description
-                }
+              <div className="truncate text-xs text-ink-muted">
+                {pageMeta.description}
               </div>
             </div>
           </div>
@@ -658,19 +673,25 @@ export default function AppShell({
           <div className="flex items-center gap-2">
             <ThemeToggle />
 
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-600 text-xs font-semibold text-white"
-              aria-label={`Signed in as ${displayName}`}
-              title={
-                displayName
-              }
-            >
+            <div className="hidden h-8 w-px bg-line sm:block" />
+
+            <div className="hidden text-right sm:block">
+              <div className="text-xs font-semibold text-ink">
+                {displayName}
+              </div>
+
+              <div className="text-[10px] text-ink-muted">
+                {session?.username}
+              </div>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700">
               {initials}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="min-w-0 flex-1">
           {children}
         </main>
       </div>
